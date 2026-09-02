@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple lightning-bolt icon: green bolt on transparent foreground -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#4BE277"
+        android:pathData="M60,24 L38,58 L52,58 L48,84 L70,50 L56,50 Z" />
+</vector>
