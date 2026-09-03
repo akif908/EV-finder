@@ -1,3 +1,28 @@
-
-# Antigravity internal files
+#  internal files
 .zcode/
+
+# Android build outputs
+EV-finder-android/app/build/
+EV-finder-android/build/
+
+# Gradle cache & wrapper (keep wrapper properties, ignore generated cache)
+EV-finder-android/.gradle/
+EV-finder-android/local.properties
+
+# Compiled class/dex files
+*.class
+*.dex
+
+# Spring Boot / Maven build output
+EV-finder-api/target/
+
+# IDE files
+*.iml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/caches
+.DS_Store

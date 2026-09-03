@@ -7,6 +7,7 @@ import com.example.EV_finder_api.exception.*;
 import com.example.EV_finder_api.repository.*;
 import com.example.EV_finder_api.security.CurrentUserProvider;
 import com.example.EV_finder_api.service.BookingService;
+import com.example.EV_finder_api.websocket.AvailabilityWebSocketHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,17 +23,20 @@ public class BookingServiceImpl implements BookingService {
     private final VehicleRepository vehicleRepository;
     private final StationServiceRepository stationServiceRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final AvailabilityWebSocketHandler availabilitySocket;
 
     public BookingServiceImpl(BookingRepository bookingRepository,
                               PaymentRepository paymentRepository,
                               VehicleRepository vehicleRepository,
                               StationServiceRepository stationServiceRepository,
-                              CurrentUserProvider currentUserProvider) {
+                              CurrentUserProvider currentUserProvider,
+                              AvailabilityWebSocketHandler availabilitySocket) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.vehicleRepository = vehicleRepository;
         this.stationServiceRepository = stationServiceRepository;
         this.currentUserProvider = currentUserProvider;
+        this.availabilitySocket = availabilitySocket;
     }
 
     /**
@@ -81,6 +85,7 @@ public class BookingServiceImpl implements BookingService {
                 .status(BookingStatus.PENDING)
                 .build();
         booking = bookingRepository.save(booking);
+        availabilitySocket.broadcastAvailability(service); // live update to all clients
         return BookingResponse.from(booking, service.getPricePerUnit());
     }
 
@@ -118,7 +123,9 @@ public class BookingServiceImpl implements BookingService {
         paymentRepository.findByBookingId(bookingId).ifPresent(p -> {
             if (p.getStatus() == PaymentStatus.SUCCESS) p.setStatus(PaymentStatus.REFUNDED);
         });
-        return BookingResponse.from(bookingRepository.save(booking), amountOf(booking));
+        bookingRepository.save(booking);
+        availabilitySocket.broadcastAvailability(booking.getService()); // slot back on the market
+        return BookingResponse.from(booking, amountOf(booking));
     }
 
     Booking bookingForPayment(String bookingId, String userId) {

@@ -9,6 +9,7 @@ import com.example.EV_finder_api.repository.PaymentRepository;
 import com.example.EV_finder_api.security.CurrentUserProvider;
 import com.example.EV_finder_api.service.BookingService;
 import com.example.EV_finder_api.service.PaymentService;
+import com.example.EV_finder_api.websocket.AvailabilityWebSocketHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,13 +22,16 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final BookingServiceImpl bookingServiceImpl;
     private final CurrentUserProvider currentUserProvider;
+    private final AvailabilityWebSocketHandler availabilitySocket;
 
     public PaymentServiceImpl(PaymentRepository paymentRepository,
                               BookingServiceImpl bookingServiceImpl,
-                              CurrentUserProvider currentUserProvider) {
+                              CurrentUserProvider currentUserProvider,
+                              AvailabilityWebSocketHandler availabilitySocket) {
         this.paymentRepository = paymentRepository;
         this.bookingServiceImpl = bookingServiceImpl;
         this.currentUserProvider = currentUserProvider;
+        this.availabilitySocket = availabilitySocket;
     }
 
     @Override
@@ -59,6 +63,10 @@ public class PaymentServiceImpl implements PaymentService {
         payment = paymentRepository.save(payment);
 
         booking.setStatus(success ? BookingStatus.CONFIRMED : BookingStatus.CANCELLED);
+        if (!success) {
+            // failed payment releases the slot — tell everyone live
+            availabilitySocket.broadcastAvailability(booking.getService());
+        }
         return PaymentResponse.from(payment);
     }
 }

@@ -32,6 +32,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.evfinder.core.storage.TokenStore
 import com.example.evfinder.feature.auth.LoginScreen
 import com.example.evfinder.feature.auth.RegisterScreen
+import com.example.evfinder.feature.booking.BookingsScreen
+import com.example.evfinder.feature.booking.BookingScreen
+import com.example.evfinder.feature.booking.PaymentScreen
 import com.example.evfinder.feature.home.HomeScreen
 import com.example.evfinder.feature.station.StationDetailScreen
 import com.example.evfinder.ui.theme.EVFinderTheme
@@ -134,8 +137,14 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                     }
                 )
             }
+            composable("bookings") {
+                BookingsScreen(onSessionExpired = {
+                    tokenStore.clear()
+                    navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                })
+            }
             userBottomDestinations
-                .filter { it.route != "home" }
+                .filter { it.route != "home" && it.route != "bookings" }
                 .forEach { dest ->
                     composable(dest.route) { PlaceholderScreen(stringResource(dest.labelRes)) }
                 }
@@ -145,8 +154,33 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                 val stationId = entry.arguments?.getString("stationId") ?: return@composable
                 StationDetailScreen(
                     stationId = stationId,
-                    onBookService = { stationIdArg, serviceId ->
-                        // Booking flow arrives in Phase 4
+                    onBookService = { _, serviceId ->
+                        navController.navigate("book/$serviceId")
+                    }
+                )
+            }
+
+            // ---- Booking flow (pushed, no bottom bar) ----
+            composable("book/{serviceId}") { entry ->
+                val serviceId = entry.arguments?.getString("serviceId") ?: return@composable
+                BookingScreen(
+                    serviceId = serviceId,
+                    onBookingCreated = { bookingId ->
+                        navController.navigate("payment/$bookingId") {
+                            popUpTo("book/$serviceId") { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable("payment/{bookingId}") { entry ->
+                val bookingId = entry.arguments?.getString("bookingId") ?: return@composable
+                PaymentScreen(
+                    bookingId = bookingId,
+                    onDone = {
+                        navController.navigate("bookings") {
+                            popUpTo("home")
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
