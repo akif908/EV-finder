@@ -54,6 +54,11 @@ public class Station {
     @Builder.Default
     private StationStatus status = StationStatus.ACTIVE;
 
+    /** Remaining energy reserve at the station, as a percentage (0–100). */
+    @Column(name = "fuel_level")
+    @Builder.Default
+    private Integer fuelLevel = 100;
+
     @OneToMany(mappedBy = "station", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<StationService> services = new ArrayList<>();

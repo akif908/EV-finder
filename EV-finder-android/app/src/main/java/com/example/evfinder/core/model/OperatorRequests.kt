@@ -8,7 +8,8 @@ data class OperatorStationRequest(
     val latitude: Double,
     val longitude: Double,
     val openingTime: String?,   // "HH:mm"
-    val closingTime: String?
+    val closingTime: String?,
+    val fuelLevel: Int = 100    // remaining energy reserve, 0–100 (%)
 )
 
 /** Mirrors backend StationServiceRequest (operator add/update service). */

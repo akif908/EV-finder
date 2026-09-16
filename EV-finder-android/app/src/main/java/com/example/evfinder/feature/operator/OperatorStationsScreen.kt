@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -164,6 +165,15 @@ private fun OperatorStationCard(
                         color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
                     station.address?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.LocalGasStation, null,
+                            tint = if (station.fuelLevel >= 30) EvColors.Primary else EvColors.Error,
+                            modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Fuel level: ${station.fuelLevel}%",
+                            style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
                     }
                 }
                 StatusPill(
@@ -331,7 +341,7 @@ private fun StationFormDialog(
     pendingLat: Double?,
     pendingLng: Double?,
     saving: Boolean,
-    onSave: (name: String, desc: String, address: String, open: String, close: String) -> Unit,
+    onSave: (name: String, desc: String, address: String, open: String, close: String, fuelLevel: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(editing?.name ?: "") }
@@ -339,6 +349,9 @@ private fun StationFormDialog(
     var address by remember { mutableStateOf(editing?.address ?: "") }
     var open by remember { mutableStateOf(editing?.openingTime?.take(5) ?: "08:00") }
     var close by remember { mutableStateOf(editing?.closingTime?.take(5) ?: "22:00") }
+    var fuel by remember {
+        mutableStateOf((editing?.fuelLevel ?: 100).toString())
+    }
     var error by remember { mutableStateOf<String?>(null) }
 
     // coordinates: from the map picker (new) or the existing station (edit)
@@ -369,6 +382,8 @@ private fun StationFormDialog(
                     Box(Modifier.weight(1f)) { EvTextField(open, { open = it }, "Opens (HH:mm)") }
                     Box(Modifier.weight(1f)) { EvTextField(close, { close = it }, "Closes (HH:mm)") }
                 }
+                Spacer(Modifier.height(8.dp))
+                EvTextField(fuel, { fuel = it }, "Fuel level (0–100 %)")
                 error?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(it, color = EvColors.Error, style = MaterialTheme.typography.bodySmall)
@@ -379,11 +394,14 @@ private fun StationFormDialog(
             EvPrimaryButton(
                 text = if (saving) "Saving…" else "Save",
                 onClick = {
-                    if (name.isBlank()) {
-                        error = "Station name is required"
-                    } else {
-                        error = null
-                        onSave(name, desc, address, open, close)
+                    val fuelValue = fuel.toIntOrNull()
+                    when {
+                        name.isBlank() -> error = "Station name is required"
+                        fuelValue == null || fuelValue !in 0..100 -> error = "Fuel level must be 0–100"
+                        else -> {
+                            error = null
+                            onSave(name, desc, address, open, close, fuelValue)
+                        }
                     }
                 },
                 enabled = !saving
@@ -535,6 +553,9 @@ private fun OperatorStationReadOnlyCard(station: StationDto) {
                 }
                 StatusPill(label = "Other operator", isActive = false)
             }
+            Spacer(Modifier.height(4.dp))
+            Text("Fuel level: ${station.fuelLevel}%",
+                style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
             if (station.services.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text(

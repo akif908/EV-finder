@@ -161,7 +161,7 @@ class OperatorStationsViewModel : ViewModel() {
     fun openStatusDialog(stationId: String) { _uiState.value = _uiState.value.copy(statusDialogStationId = stationId) }
     fun closeStatusDialog() { _uiState.value = _uiState.value.copy(statusDialogStationId = null) }
 
-    fun saveStation(name: String, description: String, address: String, open: String, close: String) {
+    fun saveStation(name: String, description: String, address: String, open: String, close: String, fuelLevel: Int) {
         val s = _uiState.value
         val editing = s.stationForm
         val lat = s.pendingLat ?: editing?.latitude
@@ -176,7 +176,8 @@ class OperatorStationsViewModel : ViewModel() {
             latitude = lat,
             longitude = lng,
             openingTime = open.takeIf { it.isNotBlank() },
-            closingTime = close.takeIf { it.isNotBlank() }
+            closingTime = close.takeIf { it.isNotBlank() },
+            fuelLevel = fuelLevel
         )
         viewModelScope.launch {
             _uiState.value = s.copy(saving = true, error = null)

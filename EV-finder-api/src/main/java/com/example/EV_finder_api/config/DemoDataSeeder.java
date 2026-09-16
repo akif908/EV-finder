@@ -10,10 +10,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Seeds demo accounts and stations so the app has something to show.
- * Runs only while the stations table is empty. Remove for production.
+ * On every startup it ensures the demo stations below exist (by name) and
+ * backfills fuel levels; user/operator-created stations are never touched.
+ * Remove for production.
  */
 @Component
 public class DemoDataSeeder implements CommandLineRunner {
@@ -32,25 +36,44 @@ public class DemoDataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (stationRepository.count() > 0) return;
+        // stations created before fuel_level existed: give them the default full reserve
+        stationRepository.findAll().forEach(s -> {
+            if (s.getFuelLevel() == null) {
+                s.setFuelLevel(100);
+                stationRepository.save(s);
+            }
+        });
 
         User operator = getOrCreateUser("operator@ev.com", "operator123", "Volt Operator", Role.OPERATOR);
         getOrCreateUser("admin@ev.com", "admin123", "Platform Admin", Role.ADMIN);
 
-        seedStation(operator, "GreenPulse Hub Banani", "Fast charging hub with lounge",
-                "Road 11, Banani, Dhaka", 23.7925, 90.4078, "08:00", "23:00",
+        // ensure the demo stations exist — adds missing ones, never touches other stations
+        Set<String> existingNames = stationRepository.findAll().stream()
+                .map(Station::getName).collect(Collectors.toSet());
+        long before = stationRepository.count();
+
+        seedStation(existingNames, operator, "GreenPulse Hub Banani", "Fast charging hub with lounge",
+                "Road 11, Banani, Dhaka", 23.7925, 90.4078, "08:00", "23:00", 92,
                 new String[][]{{"CHARGING", "CCS2", "150", "45.00"}, {"CHARGING", "Type2", "60", "35.00"}});
 
-        seedStation(operator, "Dhanmondi Swap Point", "Battery swap for bikes & three-wheelers",
-                "Mirpur Road, Dhanmondi, Dhaka", 23.7461, 90.3742, "09:00", "21:00",
+        seedStation(existingNames, operator, "Dhanmondi Swap Point", "Battery swap for bikes & three-wheelers",
+                "Mirpur Road, Dhanmondi, Dhaka", 23.7461, 90.3742, "09:00", "21:00", 67,
                 new String[][]{{"BATTERY_SWAP", null, null, "80.00"}, {"CHARGING", "Type2", "22", "30.00"}});
 
-        seedStation(operator, "Uttara UltraCharge", "Ultra-fast corridor station",
-                "Sector 7, Uttara, Dhaka", 23.8759, 90.3795, "00:00", "23:59",
+        seedStation(existingNames, operator, "Uttara UltraCharge", "Ultra-fast corridor station",
+                "Sector 7, Uttara, Dhaka", 23.8759, 90.3795, "00:00", "23:59", 100,
                 new String[][]{{"CHARGING", "CCS2", "350", "55.00"}});
 
-        System.out.println("[DemoDataSeeder] Seeded demo accounts "
-                + "(operator@ev.com/operator123, admin@ev.com/admin123) and 3 stations");
+        seedStation(existingNames, operator, "Mirpur Community Chargers", "Neighborhood 22 kW top-up spot",
+                "Ring Road, Mirpur, Dhaka", 23.8046, 90.3665, "07:00", "22:00", 38,
+                new String[][]{{"CHARGING", "Type2", "22", "25.00"}, {"CHARGING", "Type2", "22", "25.00"}});
+
+        seedStation(existingNames, operator, "Old Dhaka Rapid Charge", "Quick top-up near Gulistan",
+                "Gulistan, Dhaka", 23.7255, 90.4126, "06:00", "23:00", 12,
+                new String[][]{{"CHARGING", "CCS2", "150", "48.00"}});
+
+        System.out.println("[DemoDataSeeder] Demo accounts ensured (operator@ev.com/operator123, admin@ev.com/admin123); "
+                + (stationRepository.count() - before) + " demo station(s) added, " + stationRepository.count() + " total");
     }
 
     private User getOrCreateUser(String email, String password, String name, Role role) {
@@ -61,14 +84,18 @@ public class DemoDataSeeder implements CommandLineRunner {
                         .role(role).build()));
     }
 
-    private void seedStation(User operator, String name, String desc, String address,
-                             double lat, double lng, String open, String close,
+    private void seedStation(Set<String> existingNames, User operator, String name, String desc, String address,
+                             double lat, double lng, String open, String close, int fuelLevel,
                              String[][] services) {
+        if (existingNames.contains(name)) return; // demo station already present — leave it as the operator set it
+        existingNames.add(name);
+
         Station station = Station.builder()
                 .operator(operator)
                 .name(name).description(desc).address(address)
                 .latitude(BigDecimal.valueOf(lat)).longitude(BigDecimal.valueOf(lng))
                 .openingTime(LocalTime.parse(open)).closingTime(LocalTime.parse(close))
+                .fuelLevel(fuelLevel)
                 .status(StationStatus.ACTIVE)
                 .build();
 

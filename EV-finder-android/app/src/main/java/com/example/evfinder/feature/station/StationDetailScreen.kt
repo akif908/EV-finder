@@ -176,6 +176,36 @@ private fun StationDetailContent(
                         Text(it, style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
                     }
                 }
+                Spacer(Modifier.height(12.dp))
+                val level = station.fuelLevel
+                val levelColor = when {
+                    level >= 50 -> EvColors.Success
+                    level >= 20 -> EvColors.Warning
+                    else -> EvColors.Error
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.LocalGasStation, null, tint = levelColor, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "Fuel level",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = EvColors.OnSurfaceVar,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        "$level%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = levelColor,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { level / 100f },
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    color = levelColor,
+                    trackColor = EvColors.SurfaceHigh
+                )
             }
         }
 

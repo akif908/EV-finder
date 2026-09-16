@@ -58,6 +58,7 @@ CREATE TABLE stations (
   opening_time TIME NULL,                       -- availability bounded by these
   closing_time TIME NULL,
   status       ENUM('ACTIVE','INACTIVE','TEMPORARILY_UNAVAILABLE') NOT NULL DEFAULT 'ACTIVE',
+  fuel_level   INT NULL,                        -- remaining energy reserve, 0-100 (%)
   created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (station_id),

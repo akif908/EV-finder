@@ -1,0 +1,265 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-error":"#690005","tertiary-fixed":"#d8e2ff","inverse-on-surface":"#313030","on-tertiary-container":"#003d88","primary-fixed":"#6bff8f","background":"#131313","on-primary":"#003915","surface-bright":"#393939","primary-fixed-dim":"#4ae176","on-secondary":"#003824","on-secondary-fixed":"#002113","on-secondary-fixed-variant":"#005236","surface":"#131313","primary":"#4be277","tertiary-container":"#82abff","inverse-primary":"#006e2f","on-surface":"#e5e2e1","on-tertiary-fixed-variant":"#004395","surface-container-low":"#1c1b1b","on-primary-container":"#004b1e","on-primary-fixed-variant":"#005321","surface-container-high":"#2a2a2a","on-tertiary-fixed":"#001a42","outline":"#869585","surface-container-highest":"#353534","on-background":"#e5e2e1","on-secondary-container":"#00311f","primary-container":"#22c55e","secondary":"#4edea3","secondary-fixed":"#6ffbbe","on-tertiary":"#002e6a","inverse-surface":"#e5e2e1","secondary-fixed-dim":"#4edea3","error":"#ffb4ab","on-primary-fixed":"#002109","surface-tint":"#4ae176","surface-variant":"#353534","surface-dim":"#131313","tertiary-fixed-dim":"#adc6ff","secondary-container":"#00a572","on-surface-variant":"#bccbb9","surface-container-lowest":"#0e0e0e","error-container":"#93000a","on-error-container":"#ffdad6","surface-container":"#201f1f","tertiary":"#afc7ff","outline-variant":"#3d4a3d"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{base:"8px","stack-lg":"32px","stack-md":"16px","container-max":"1440px",gutter:"24px","stack-sm":"8px","margin-desktop":"64px"},fontFamily:{"body-lg":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"title-lg":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"]},fontSize:{"body-lg":["18px",{lineHeight:"28px",fontWeight:"400"}],"display-lg":["64px",{lineHeight:"72px",letterSpacing:"-0.02em",fontWeight:"800"}],"headline-lg":["40px",{lineHeight:"48px",letterSpacing:"-0.01em",fontWeight:"700"}],"body-md":["16px",{lineHeight:"24px",fontWeight:"400"}],"label-sm":["12px",{lineHeight:"16px",fontWeight:"600"}],"label-md":["14px",{lineHeight:"20px",letterSpacing:"0.01em",fontWeight:"600"}],"title-lg":["24px",{lineHeight:"32px",fontWeight:"600"}],"headline-md":["32px",{lineHeight:"40px",fontWeight:"700"}]}}}}</script><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-on-background"><aside class="fixed left-0 top-0 h-full w-[280px] bg-surface-container-low z-50 flex flex-col py-stack-md"><div class="px-stack-md mb-stack-lg flex items-center gap-stack-sm"><img alt="EV Finder" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLu_CXdkNDKcV1EIY9s2UdqAZqzcxqTEzzdsEEx5RuYWKwqy4AfopVvcjyAtKlKFlhfZ2t36BphQhWiAcJobQkJN8J1eQZIxJNamq66ySlRhU5ad-hndAcyNvDb1HOh3d5rvvp_nS-LeHmzJ97Usk0kj22Ya7yrsuW_MSxpmExcwJZoRqhuPNoMfmeMc12CEJQwnHMt8ZMxG-0ch4RlMUzhR_Esxf--Zueku-jblU7xXC_HJzJXewjKSe58"/><span class="font-title-lg text-title-lg text-primary tracking-tight">EV Finder</span></div><nav class="flex-1 px-base space-y-1" data-active-classes="bg-primary-container text-on-primary-container font-bold"><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="dashboard" href="#"><span class="material-symbols-outlined mr-3">dashboard</span><span class="font-label-md text-label-md">Dashboard</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="users" href="#"><span class="material-symbols-outlined mr-3">person</span><span class="font-label-md text-label-md">Users</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="operators" href="#"><span class="material-symbols-outlined mr-3">business_center</span><span class="font-label-md text-label-md">Operators</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="verifications" href="#"><span class="material-symbols-outlined mr-3">verified_user</span><span class="font-label-md text-label-md">Verifications</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="stations" href="#"><span class="material-symbols-outlined mr-3">ev_station</span><span class="font-label-md text-label-md">Stations</span></a><a aria-current="page" class="flex items-center px-stack-md py-3 rounded-lg transition-all group bg-primary-container text-on-primary-container font-bold" data-path="bookings" href="#"><span class="material-symbols-outlined mr-3">calendar_today</span><span class="font-label-md text-label-md">Bookings</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="reviews" href="#"><span class="material-symbols-outlined mr-3">rate_review</span><span class="font-label-md text-label-md">Reviews</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="ai-monitoring" href="#"><span class="material-symbols-outlined mr-3">monitoring</span><span class="font-label-md text-label-md">AI Monitoring</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="activity" href="#"><span class="material-symbols-outlined mr-3">history</span><span class="font-label-md text-label-md">Activity</span></a></nav></aside><div class="pl-[280px]"><header class="fixed top-0 left-[280px] right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-margin-desktop"><div class="flex items-center gap-stack-md"><span class="font-label-md text-on-surface-variant">Admin Console</span></div><div class="flex items-center gap-stack-md"><button class="p-base rounded-full hover:bg-surface-container-high text-on-surface-variant"><span class="material-symbols-outlined">notifications</span></button><div class="flex items-center gap-stack-sm ml-base pl-base border-l border-outline-variant"><div class="text-right hidden sm:block"><p class="font-label-md text-on-surface">System Admin</p><p class="font-label-sm text-on-surface-variant">admin@evfinder.com</p></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover border border-outline-variant" src="https://lh3.googleusercontent.com/aida/AP1WRLuoXaC9OdwUGwgyrGbJkQn6uUBq2johVpkp3RWJftTAarKJ2V5MPIuWKbV7Sfx7X5oevkpyQCSyE8JV3PvM_HS4NDwMoLQk81DUn9KDYdsuboE3Y4tgZczhnhpHw8eSplaK7lX_m5RPLykESE2a7m376Sems-zg7xWSiSeItnJAARQuV3YNcfq1FKMFlRPPzz8JusYgt7yIvaWz3MY0YClyfIOV0w1Bp9QR6wgSzavIJ5u-MqTMMUqjzGg"/></div></div></header><main class="relative pt-16 bg-background min-h-screen"><div class="flex flex-col w-full">
+<div class="px-margin-desktop py-stack-lg flex flex-col gap-stack-lg">
+<div class="flex items-start justify-between">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-background mb-stack-sm">Booking Management</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Overview and administration of all system reservations.</p>
+</div>
+<div class="flex gap-stack-md">
+<button class="bg-surface-container-high hover:bg-surface-container-highest text-on-surface px-stack-md py-base rounded-full font-label-md text-label-md flex items-center gap-stack-sm transition-colors duration-150 shadow-sm">
+<span class="material-symbols-outlined text-base">download</span>
+          Export Report
+        </button>
+<button class="bg-primary hover:bg-primary-fixed-dim text-on-primary px-stack-md py-base rounded-full font-label-md text-label-md flex items-center gap-stack-sm transition-colors duration-150 shadow-sm">
+<span class="material-symbols-outlined text-base">add</span>
+          Manual Booking
+        </button>
+</div>
+</div>
+<!-- Summary Metrics Grid -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Rates Card -->
+<div class="col-span-12 md:col-span-4 bg-surface-container rounded-xl p-gutter shadow-md relative overflow-hidden group">
+<div class="absolute -right-8 -top-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors duration-500"></div>
+<div class="flex flex-col h-full justify-between relative z-10">
+<div class="flex items-center justify-between mb-stack-md">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant">Completion Rate</span>
+<span class="material-symbols-outlined text-primary">check_circle</span>
+</div>
+<div>
+<div class="flex items-baseline gap-stack-sm">
+<span class="font-display-lg text-display-lg text-on-background">87.4%</span>
+<span class="font-label-md text-label-md text-primary flex items-center"><span class="material-symbols-outlined text-[14px]">arrow_upward</span> 2.1%</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-stack-sm">Versus 12.6% cancellation rate (last 30 days).</p>
+</div>
+<div class="mt-stack-md flex w-full h-2 rounded-full overflow-hidden bg-surface-container-highest">
+<div class="h-full bg-primary" style="width: 87.4%"></div>
+<div class="h-full bg-error" style="width: 12.6%"></div>
+</div>
+</div>
+</div>
+<!-- Peak Hours Chart -->
+<div class="col-span-12 md:col-span-8 bg-surface-container rounded-xl p-gutter shadow-md flex flex-col justify-between">
+<div class="flex items-center justify-between mb-stack-md">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant">Peak Booking Hours</span>
+<select class="bg-surface-container-high text-on-surface border-none rounded-lg px-stack-sm py-base font-label-sm focus:ring-2 focus:ring-primary/20 outline-none">
+<option>Today</option>
+<option>Last 7 Days</option>
+<option>This Month</option>
+</select>
+</div>
+<!-- Inline SVG Sparkline -->
+<div class="w-full h-32 relative mt-auto flex items-end">
+<svg class="w-full h-full preserve-aspect-ratio-none" preserveaspectratio="none" viewbox="0 0 100 30">
+<path d="M0,25 L10,22 L20,26 L30,15 L40,18 L50,5 L60,12 L70,8 L80,20 L90,15 L100,28 L100,30 L0,30 Z" fill="url(#gradient)" opacity="0.3"></path>
+<path class="text-primary" d="M0,25 L10,22 L20,26 L30,15 L40,18 L50,5 L60,12 L70,8 L80,20 L90,15 L100,28" fill="none" stroke="currentColor" stroke-width="0.5"></path>
+<defs>
+<lineargradient id="gradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop class="text-primary" offset="0%" stop-color="currentColor" stop-opacity="0.5"></stop>
+<stop class="text-primary" offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- X-Axis Labels -->
+<div class="absolute bottom-0 left-0 w-full flex justify-between px-2 font-label-sm text-label-sm text-on-surface-variant transform translate-y-full pt-2">
+<span>6am</span>
+<span>12pm</span>
+<span>6pm</span>
+<span>12am</span>
+</div>
+</div>
+<div class="h-6"></div> <!-- Spacer for labels -->
+</div>
+</div>
+<!-- Main List Container -->
+<div class="bg-surface-container rounded-xl shadow-lg flex flex-col mt-stack-md">
+<!-- Toolbar -->
+<div class="p-gutter flex flex-col lg:flex-row justify-between gap-stack-md bg-surface-container-low rounded-t-xl">
+<div class="flex-1 relative">
+<span class="material-symbols-outlined absolute left-stack-md top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container border border-surface-container-highest focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface rounded-lg pl-12 pr-stack-md py-3 font-body-md transition-all duration-200 outline-none placeholder-on-surface-variant" placeholder="Search by Booking ID, User, or Station..." type="text"/>
+</div>
+<div class="flex gap-stack-sm">
+<button class="bg-surface-container border border-surface-container-highest hover:bg-surface-container-high text-on-surface px-stack-md py-base rounded-lg font-label-md text-label-md flex items-center gap-stack-sm transition-colors duration-150 group">
+<span class="material-symbols-outlined text-base group-hover:text-error transition-colors">warning</span>
+               Disputed
+            </button>
+<button class="bg-surface-container border border-surface-container-highest hover:bg-surface-container-high text-on-surface px-stack-md py-base rounded-lg font-label-md text-label-md flex items-center gap-stack-sm transition-colors duration-150 group">
+<span class="material-symbols-outlined text-base group-hover:text-tertiary-container transition-colors">currency_exchange</span>
+               Refund Requested
+            </button>
+<button class="bg-surface-container border border-surface-container-highest hover:bg-surface-container-high text-on-surface p-base rounded-lg flex items-center justify-center transition-colors duration-150">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+<!-- Data Table -->
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-surface-container-highest font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
+<th class="px-gutter py-stack-sm font-semibold whitespace-nowrap">ID</th>
+<th class="px-gutter py-stack-sm font-semibold">User</th>
+<th class="px-gutter py-stack-sm font-semibold">Station</th>
+<th class="px-gutter py-stack-sm font-semibold">Date / Time</th>
+<th class="px-gutter py-stack-sm font-semibold">Status</th>
+<th class="px-gutter py-stack-sm font-semibold">Payment</th>
+<th class="px-gutter py-stack-sm font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md text-on-surface">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high transition-colors duration-150 group cursor-pointer border-b border-surface-container-highest/50 last:border-0">
+<td class="px-gutter py-stack-md">
+<span class="font-mono text-primary/80">BK-7A92</span>
+</td>
+<td class="px-gutter py-stack-md">
+<div class="flex items-center gap-stack-sm">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A small circular avatar placeholder showing a generic user silhouette in dark gray against a slightly lighter dark background, suitable for a dark mode tech UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcGJ0kNba6wpcTxV02Re1LUdK9XvsbLTnyfgJb9Yogf8fHfa1azhQ37W74OTZFS35vmN0vNKSu3s5kc4hZq0a4Ob9BMZdjvTSlgrXHeeHzcVNTROI8q_tsOBurBmcvz4PIiw2PadOV6igTmzUAPkfhRhaKHVnADWK7zojbPUWvBIItlZiBcCwVmAIA1BRmtO7xuIql8n7HbTFYz3jD4t97OUMkQVOsrwGVXGsDbiunM5myGh56XcSq"/>
+<div>
+<div class="font-label-md text-on-surface">Elena Rostova</div>
+<div class="font-label-sm text-on-surface-variant">elena.r@example.com</div>
+</div>
+</div>
+</td>
+<td class="px-gutter py-stack-md">
+<div class="font-label-md">NeoCharge Hub - Westside</div>
+<div class="font-label-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">location_on</span> Terminal 3</div>
+</td>
+<td class="px-gutter py-stack-md whitespace-nowrap">
+<div>Oct 24, 2023</div>
+<div class="text-on-surface-variant text-sm">14:30 - 16:00</div>
+</td>
+<td class="px-gutter py-stack-md">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-primary/10 text-primary font-label-sm">
+                        Active
+                     </span>
+</td>
+<td class="px-gutter py-stack-md">
+<span class="flex items-center gap-1 text-on-surface"><span class="material-symbols-outlined text-[16px] text-primary">check</span> Authorized</span>
+</td>
+<td class="px-gutter py-stack-md text-right">
+<button class="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant transition-colors opacity-0 group-hover:opacity-100"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 (Disputed) -->
+<tr class="hover:bg-surface-container-high transition-colors duration-150 group cursor-pointer border-b border-surface-container-highest/50 last:border-0 bg-error/5">
+<td class="px-gutter py-stack-md">
+<span class="font-mono text-error/80">BK-3B44</span>
+</td>
+<td class="px-gutter py-stack-md">
+<div class="flex items-center gap-stack-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-label-md text-on-surface">M</div>
+<div>
+<div class="font-label-md text-on-surface">Marcus Chen</div>
+<div class="font-label-sm text-on-surface-variant">m.chen@example.com</div>
+</div>
+</div>
+</td>
+<td class="px-gutter py-stack-md">
+<div class="font-label-md">Volt Station Alpha</div>
+<div class="font-label-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">location_on</span> Bay 12</div>
+</td>
+<td class="px-gutter py-stack-md whitespace-nowrap">
+<div>Oct 24, 2023</div>
+<div class="text-on-surface-variant text-sm">09:15 - 10:45</div>
+</td>
+<td class="px-gutter py-stack-md">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-error/10 text-error font-label-sm gap-1">
+<span class="material-symbols-outlined text-[12px]">warning</span> Disputed
+                     </span>
+</td>
+<td class="px-gutter py-stack-md">
+<span class="flex items-center gap-1 text-on-surface"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">schedule</span> Pending Review</span>
+</td>
+<td class="px-gutter py-stack-md text-right">
+<button class="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant transition-colors opacity-0 group-hover:opacity-100"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-high transition-colors duration-150 group cursor-pointer border-b border-surface-container-highest/50 last:border-0">
+<td class="px-gutter py-stack-md">
+<span class="font-mono text-on-surface-variant">BK-9X11</span>
+</td>
+<td class="px-gutter py-stack-md">
+<div class="flex items-center gap-stack-sm">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A generic profile avatar placeholder, dark aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBB8TfGNVuQzuhm72DJTJeK_GQKJU9T3V8qZEHEBJSre1706W2pyUibE0448fVZWTr3l_ep38H_cDInIO7Dx2Lc2tiP2C6kfanvzze3xCCfwNUav6wCmbCxhG4HEx6BhbiBhayR6uLeeflIhAOjxX27ylk3atkC7Bz2tm-pCKC5q4V0pQ2BR2yJpItvS7nIm2PskAQWremboVCC09XZpKXMWppRFOgC2cp3g_tcjZak0DsKiLDVg9rN"/>
+<div>
+<div class="font-label-md text-on-surface">Sarah Jenkins</div>
+<div class="font-label-sm text-on-surface-variant">s.jenkins@example.com</div>
+</div>
+</div>
+</td>
+<td class="px-gutter py-stack-md">
+<div class="font-label-md">Downtown Metro Hub</div>
+<div class="font-label-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">location_on</span> Level 2</div>
+</td>
+<td class="px-gutter py-stack-md whitespace-nowrap">
+<div>Oct 23, 2023</div>
+<div class="text-on-surface-variant text-sm">18:00 - 19:30</div>
+</td>
+<td class="px-gutter py-stack-md">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-surface-container-highest text-on-surface-variant font-label-sm">
+                        Completed
+                     </span>
+</td>
+<td class="px-gutter py-stack-md">
+<span class="flex items-center gap-1 text-on-surface"><span class="material-symbols-outlined text-[16px] text-primary">check_circle</span> Paid ($14.50)</span>
+</td>
+<td class="px-gutter py-stack-md text-right">
+<button class="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant transition-colors opacity-0 group-hover:opacity-100"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 4 (Refund) -->
+<tr class="hover:bg-surface-container-high transition-colors duration-150 group cursor-pointer border-b border-surface-container-highest/50 last:border-0">
+<td class="px-gutter py-stack-md">
+<span class="font-mono text-tertiary-container/80">BK-2F88</span>
+</td>
+<td class="px-gutter py-stack-md">
+<div class="flex items-center gap-stack-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-label-md text-on-surface">D</div>
+<div>
+<div class="font-label-md text-on-surface">David O.</div>
+<div class="font-label-sm text-on-surface-variant">david.o@example.com</div>
+</div>
+</div>
+</td>
+<td class="px-gutter py-stack-md">
+<div class="font-label-md">Eco Park Express</div>
+<div class="font-label-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">location_on</span> Station 4</div>
+</td>
+<td class="px-gutter py-stack-md whitespace-nowrap">
+<div>Oct 22, 2023</div>
+<div class="text-on-surface-variant text-sm">11:00 - 11:15</div>
+</td>
+<td class="px-gutter py-stack-md">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-tertiary-container/10 text-tertiary-container font-label-sm">
+                        Cancelled
+                     </span>
+</td>
+<td class="px-gutter py-stack-md">
+<span class="flex items-center gap-1 text-tertiary-container"><span class="material-symbols-outlined text-[16px]">currency_exchange</span> Refund Req.</span>
+</td>
+<td class="px-gutter py-stack-md text-right">
+<button class="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant transition-colors opacity-0 group-hover:opacity-100"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="p-gutter border-t border-surface-container-highest flex items-center justify-between text-on-surface-variant font-label-md">
+<div>Showing 1-4 of 1,248 bookings</div>
+<div class="flex gap-stack-sm">
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high transition-colors disabled:opacity-50" disabled=""><span class="material-symbols-outlined text-base">chevron_left</span></button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-primary/10 text-primary font-bold">1</button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high transition-colors">2</button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high transition-colors">3</button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-base">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>

@@ -278,6 +278,7 @@ private fun FeaturedStationCard(station: StationDto, onClick: () -> Unit, modifi
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatPill(icon = Icons.Filled.Bolt, label = "350 kW", sublabel = "UltraFast")
                 StatPill(icon = Icons.Filled.Cable, label = "CCS ×4", sublabel = "NACS / CCS")
+                StatPill(icon = Icons.Filled.LocalGasStation, label = "${station.fuelLevel}%", sublabel = "Fuel level")
                 StatusPill(label = "2 of 4 Open")
             }
 
@@ -349,7 +350,7 @@ private fun CompactStationRow(station: StationDto, onClick: () -> Unit, modifier
             Text(station.name, style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(2.dp))
             val kw = station.services.firstOrNull()?.powerKw?.toInt()?.toString() ?: "?"
-            Text("$kw kW  •  ${station.services.size} Available", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+            Text("$kw kW  •  ${station.services.size} Available  •  ${station.fuelLevel}% fuel", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
         }
         Column(horizontalAlignment = Alignment.End) {
             LiveDot(station.status == "ACTIVE")

@@ -11,6 +11,7 @@ data class StationDto(
     val openingTime: String?,
     val closingTime: String?,
     val status: String,
+    val fuelLevel: Int = 100,     // remaining energy reserve, 0–100 (%); backend always sends it
     val services: List<ServiceDto> = emptyList()
 )
 

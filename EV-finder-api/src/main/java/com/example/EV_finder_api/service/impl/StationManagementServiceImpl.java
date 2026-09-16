@@ -44,6 +44,7 @@ public class StationManagementServiceImpl implements StationManagementService {
                 .longitude(request.longitude())
                 .openingTime(request.openingTime())
                 .closingTime(request.closingTime())
+                .fuelLevel(request.fuelLevel() == null ? 100 : request.fuelLevel())
                 .status(StationStatus.ACTIVE)
                 .build();
         return StationResponse.from(stationRepository.save(station));
@@ -67,6 +68,9 @@ public class StationManagementServiceImpl implements StationManagementService {
         station.setLongitude(request.longitude());
         station.setOpeningTime(request.openingTime());
         station.setClosingTime(request.closingTime());
+        if (request.fuelLevel() != null) {
+            station.setFuelLevel(request.fuelLevel());
+        }
         return StationResponse.from(stationRepository.save(station));
     }
 

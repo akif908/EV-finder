@@ -1,0 +1,183 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-error":"#690005","tertiary-fixed":"#d8e2ff","inverse-on-surface":"#313030","on-tertiary-container":"#003d88","primary-fixed":"#6bff8f","background":"#131313","on-primary":"#003915","surface-bright":"#393939","primary-fixed-dim":"#4ae176","on-secondary":"#003824","on-secondary-fixed":"#002113","on-secondary-fixed-variant":"#005236","surface":"#131313","primary":"#4be277","tertiary-container":"#82abff","inverse-primary":"#006e2f","on-surface":"#e5e2e1","on-tertiary-fixed-variant":"#004395","surface-container-low":"#1c1b1b","on-primary-container":"#004b1e","on-primary-fixed-variant":"#005321","surface-container-high":"#2a2a2a","on-tertiary-fixed":"#001a42","outline":"#869585","surface-container-highest":"#353534","on-background":"#e5e2e1","on-secondary-container":"#00311f","primary-container":"#22c55e","secondary":"#4edea3","secondary-fixed":"#6ffbbe","on-tertiary":"#002e6a","inverse-surface":"#e5e2e1","secondary-fixed-dim":"#4edea3","error":"#ffb4ab","on-primary-fixed":"#002109","surface-tint":"#4ae176","surface-variant":"#353534","surface-dim":"#131313","tertiary-fixed-dim":"#adc6ff","secondary-container":"#00a572","on-surface-variant":"#bccbb9","surface-container-lowest":"#0e0e0e","error-container":"#93000a","on-error-container":"#ffdad6","surface-container":"#201f1f","tertiary":"#afc7ff","outline-variant":"#3d4a3d"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{base:"8px","stack-lg":"32px","stack-md":"16px","container-max":"1440px",gutter:"24px","stack-sm":"8px","margin-desktop":"64px"},fontFamily:{"body-lg":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"title-lg":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"]},fontSize:{"body-lg":["18px",{lineHeight:"28px",fontWeight:"400"}],"display-lg":["64px",{lineHeight:"72px",letterSpacing:"-0.02em",fontWeight:"800"}],"headline-lg":["40px",{lineHeight:"48px",letterSpacing:"-0.01em",fontWeight:"700"}],"body-md":["16px",{lineHeight:"24px",fontWeight:"400"}],"label-sm":["12px",{lineHeight:"16px",fontWeight:"600"}],"label-md":["14px",{lineHeight:"20px",letterSpacing:"0.01em",fontWeight:"600"}],"title-lg":["24px",{lineHeight:"32px",fontWeight:"600"}],"headline-md":["32px",{lineHeight:"40px",fontWeight:"700"}]}}}}</script><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-on-background"><aside class="fixed left-0 top-0 h-full w-[280px] bg-surface-container-low z-50 flex flex-col py-stack-md"><div class="px-stack-md mb-stack-lg flex items-center gap-stack-sm"><img alt="EV Finder" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLu_CXdkNDKcV1EIY9s2UdqAZqzcxqTEzzdsEEx5RuYWKwqy4AfopVvcjyAtKlKFlhfZ2t36BphQhWiAcJobQkJN8J1eQZIxJNamq66ySlRhU5ad-hndAcyNvDb1HOh3d5rvvp_nS-LeHmzJ97Usk0kj22Ya7yrsuW_MSxpmExcwJZoRqhuPNoMfmeMc12CEJQwnHMt8ZMxG-0ch4RlMUzhR_Esxf--Zueku-jblU7xXC_HJzJXewjKSe58"/><span class="font-title-lg text-title-lg text-primary tracking-tight">EV Finder</span></div><nav class="flex-1 px-base space-y-1" data-active-classes="bg-primary-container text-on-primary-container font-bold"><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="dashboard" href="#"><span class="material-symbols-outlined mr-3">dashboard</span><span class="font-label-md text-label-md">Dashboard</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="users" href="#"><span class="material-symbols-outlined mr-3">person</span><span class="font-label-md text-label-md">Users</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="operators" href="#"><span class="material-symbols-outlined mr-3">business_center</span><span class="font-label-md text-label-md">Operators</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="verifications" href="#"><span class="material-symbols-outlined mr-3">verified_user</span><span class="font-label-md text-label-md">Verifications</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="stations" href="#"><span class="material-symbols-outlined mr-3">ev_station</span><span class="font-label-md text-label-md">Stations</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="bookings" href="#"><span class="material-symbols-outlined mr-3">calendar_today</span><span class="font-label-md text-label-md">Bookings</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="reviews" href="#"><span class="material-symbols-outlined mr-3">rate_review</span><span class="font-label-md text-label-md">Reviews</span></a><a class="flex items-center px-stack-md py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="ai-monitoring" href="#"><span class="material-symbols-outlined mr-3">monitoring</span><span class="font-label-md text-label-md">AI Monitoring</span></a><a aria-current="page" class="flex items-center px-stack-md py-3 rounded-lg transition-all group bg-primary-container text-on-primary-container font-bold" data-path="activity" href="#"><span class="material-symbols-outlined mr-3">history</span><span class="font-label-md text-label-md">Activity</span></a></nav></aside><div class="pl-[280px]"><header class="fixed top-0 left-[280px] right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-margin-desktop"><div class="flex items-center gap-stack-md"><span class="font-label-md text-on-surface-variant">Admin Console</span></div><div class="flex items-center gap-stack-md"><button class="p-base rounded-full hover:bg-surface-container-high text-on-surface-variant"><span class="material-symbols-outlined">notifications</span></button><div class="flex items-center gap-stack-sm ml-base pl-base border-l border-outline-variant"><div class="text-right hidden sm:block"><p class="font-label-md text-on-surface">System Admin</p><p class="font-label-sm text-on-surface-variant">admin@evfinder.com</p></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover border border-outline-variant" src="https://lh3.googleusercontent.com/aida/AP1WRLuoXaC9OdwUGwgyrGbJkQn6uUBq2johVpkp3RWJftTAarKJ2V5MPIuWKbV7Sfx7X5oevkpyQCSyE8JV3PvM_HS4NDwMoLQk81DUn9KDYdsuboE3Y4tgZczhnhpHw8eSplaK7lX_m5RPLykESE2a7m376Sems-zg7xWSiSeItnJAARQuV3YNcfq1FKMFlRPPzz8JusYgt7yIvaWz3MY0YClyfIOV0w1Bp9QR6wgSzavIJ5u-MqTMMUqjzGg"/></div></div></header><main class="relative pt-16 bg-background min-h-screen"><div class="flex flex-col w-full h-full gap-stack-lg p-margin-desktop">
+<header class="flex justify-between items-end">
+<div>
+<h1 class="font-display-lg text-display-lg text-on-background mb-stack-sm">System Activity</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+        Global live log and health overview of all internal services, regional operations, and security monitors.
+      </p>
+</div>
+<div class="flex items-center gap-stack-md">
+<div class="flex items-center gap-stack-sm bg-surface-container-high rounded-full px-stack-md py-stack-sm">
+<div class="w-3 h-3 rounded-full bg-primary-container animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+<span class="font-label-md text-label-md text-on-surface">Live Sync Active</span>
+</div>
+</div>
+</header>
+<div class="grid grid-cols-12 gap-gutter">
+<section class="col-span-12 lg:col-span-8 flex flex-col gap-stack-md">
+<div class="flex justify-between items-center px-stack-sm">
+<h2 class="font-title-lg text-title-lg text-on-background">Event Stream</h2>
+<div class="flex gap-stack-sm bg-surface-container-high p-1 rounded-lg">
+<button class="px-4 py-1.5 rounded-md font-label-md text-label-md bg-surface text-on-surface shadow-sm transition-colors cursor-pointer">All</button>
+<button class="px-4 py-1.5 rounded-md font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">Info</button>
+<button class="px-4 py-1.5 rounded-md font-label-md text-label-md text-secondary hover:text-on-surface transition-colors cursor-pointer">Warning</button>
+<button class="px-4 py-1.5 rounded-md font-label-md text-label-md text-error hover:text-error-container transition-colors cursor-pointer">Critical</button>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-xl p-stack-md h-[600px] overflow-hidden relative shadow-lg">
+<div class="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-surface-container-low to-transparent z-10 pointer-events-none"></div>
+<div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-surface-container-low to-transparent z-10 pointer-events-none"></div>
+<div class="h-full overflow-y-auto space-y-2 pr-2 custom-scrollbar flex flex-col-reverse" id="log-container">
+<div class="group flex items-start gap-stack-md p-stack-sm rounded-lg hover:bg-surface-container-high transition-colors">
+<div class="min-w-[80px] font-label-sm text-label-sm text-on-surface-variant font-mono">14:02:45</div>
+<div class="p-1 rounded bg-surface text-error">
+<span class="material-symbols-outlined text-[18px]">gpp_maybe</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-md text-label-md text-error">Auth Gateway Overload</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Sec-02</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Spike in failed login attempts detected originating from block 192.168.x.x. Auto-throttling engaged.</p>
+</div>
+</div>
+<div class="group flex items-start gap-stack-md p-stack-sm rounded-lg hover:bg-surface-container-high transition-colors">
+<div class="min-w-[80px] font-label-sm text-label-sm text-on-surface-variant font-mono">14:01:12</div>
+<div class="p-1 rounded bg-surface text-secondary">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-md text-label-md text-secondary">High API Latency</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">API-EU</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Average response time for /v1/stations exceeded 400ms threshold.</p>
+</div>
+</div>
+<div class="group flex items-start gap-stack-md p-stack-sm rounded-lg hover:bg-surface-container-high transition-colors opacity-70 hover:opacity-100">
+<div class="min-w-[80px] font-label-sm text-label-sm text-on-surface-variant font-mono">13:58:30</div>
+<div class="p-1 rounded bg-surface text-primary-container">
+<span class="material-symbols-outlined text-[18px]">info</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-md text-label-md text-on-surface">New Operator Registered</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Usr-Mgr</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Operator 'VoltCharge' successfully completed KYC verification.</p>
+</div>
+</div>
+<div class="group flex items-start gap-stack-md p-stack-sm rounded-lg hover:bg-surface-container-high transition-colors opacity-70 hover:opacity-100">
+<div class="min-w-[80px] font-label-sm text-label-sm text-on-surface-variant font-mono">13:55:01</div>
+<div class="p-1 rounded bg-surface text-primary-container">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-md text-label-md text-on-surface">Database Backup Complete</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">DB-Sys</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Scheduled incremental backup completed successfully in 45s. Total size: 2.4GB.</p>
+</div>
+</div>
+<div class="group flex items-start gap-stack-md p-stack-sm rounded-lg hover:bg-surface-container-high transition-colors opacity-70 hover:opacity-100">
+<div class="min-w-[80px] font-label-sm text-label-sm text-on-surface-variant font-mono">13:42:19</div>
+<div class="p-1 rounded bg-surface text-error">
+<span class="material-symbols-outlined text-[18px]">gpp_maybe</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-md text-label-md text-error">Station Offline Alert</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">IoT-Hub</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Station ID: #4492 (Berlin Central) lost connectivity. Retrying handshake...</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="col-span-12 lg:col-span-4 flex flex-col gap-stack-lg">
+<div class="bg-surface-container-low rounded-xl p-stack-lg shadow-md flex flex-col gap-stack-md">
+<h3 class="font-title-lg text-title-lg text-on-background">System Health</h3>
+<div class="space-y-stack-sm">
+<div class="flex justify-between items-end mb-1">
+<span class="font-label-md text-label-md text-on-surface-variant">Global API Uptime</span>
+<span class="font-headline-md text-headline-md text-primary-container leading-none">99.98%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full w-[99.98%] shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-stack-sm mt-stack-sm">
+<div class="bg-surface p-stack-sm rounded-lg">
+<span class="font-label-sm text-label-sm text-on-surface-variant block mb-1">Server Load</span>
+<span class="font-title-lg text-title-lg text-on-surface">42%</span>
+</div>
+<div class="bg-surface p-stack-sm rounded-lg">
+<span class="font-label-sm text-label-sm text-on-surface-variant block mb-1">Active Conns</span>
+<span class="font-title-lg text-title-lg text-on-surface">12.4k</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-xl p-stack-lg shadow-md flex flex-col gap-stack-md">
+<h3 class="font-title-lg text-title-lg text-on-background">Regional Latency</h3>
+<div class="space-y-stack-md">
+<div class="flex items-center gap-stack-md group">
+<div class="w-12 h-12 rounded-full bg-surface flex items-center justify-center font-label-md text-label-md text-on-surface group-hover:bg-primary-container group-hover:text-on-primary-container transition-colors">NA</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="font-label-md text-label-md text-on-surface">North America</span>
+<span class="font-label-md text-label-md text-primary-container">45ms</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full w-[20%]"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-stack-md group">
+<div class="w-12 h-12 rounded-full bg-surface flex items-center justify-center font-label-md text-label-md text-on-surface group-hover:bg-secondary group-hover:text-on-secondary transition-colors">EU</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="font-label-md text-label-md text-on-surface">Europe</span>
+<span class="font-label-md text-label-md text-secondary">120ms</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full w-[60%]"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-stack-md group">
+<div class="w-12 h-12 rounded-full bg-surface flex items-center justify-center font-label-md text-label-md text-on-surface group-hover:bg-error group-hover:text-on-error transition-colors">AP</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="font-label-md text-label-md text-on-surface">Asia Pacific</span>
+<span class="font-label-md text-label-md text-error">310ms</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error rounded-full w-[95%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    display: block;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+</style></main></div></body></html>

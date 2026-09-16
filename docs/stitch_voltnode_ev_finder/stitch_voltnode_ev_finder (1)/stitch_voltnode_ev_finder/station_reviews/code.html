@@ -1,0 +1,204 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"on-surface":"#e5e2e1","primary-container":"#22c55e","primary-fixed-dim":"#4ae176","on-error":"#690005","error":"#ffb4ab","inverse-primary":"#006e2f","on-tertiary-container":"#003d88","on-background":"#e5e2e1","inverse-on-surface":"#313030","surface-container-high":"#2a2a2a","on-secondary-container":"#00311f","surface-container":"#201f1f","surface":"#131313","surface-dim":"#131313","outline-variant":"#3d4a3d","outline":"#869585","on-primary-fixed":"#002109","surface-bright":"#393939","secondary-fixed":"#6ffbbe","surface-container-lowest":"#0e0e0e","primary-fixed":"#6bff8f","surface-tint":"#4ae176","inverse-surface":"#e5e2e1","secondary-fixed-dim":"#4edea3","tertiary-fixed":"#d8e2ff","on-tertiary-fixed-variant":"#004395","on-secondary-fixed-variant":"#005236","on-primary-container":"#004b1e","on-tertiary":"#002e6a","primary":"#4be277","on-primary-fixed-variant":"#005321","secondary-container":"#00a572","error-container":"#93000a","secondary":"#4edea3","on-surface-variant":"#bccbb9","on-secondary":"#003824","on-secondary-fixed":"#002113","on-tertiary-fixed":"#001a42","background":"#131313","tertiary-container":"#82abff","surface-variant":"#353534","tertiary":"#afc7ff","tertiary-fixed-dim":"#adc6ff","on-primary":"#003915","on-error-container":"#ffdad6","surface-container-highest":"#353534"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"stack-md":"16px","base":"8px","gutter":"24px","stack-lg":"32px","stack-sm":"8px","container-max":"1440px","margin-desktop":"64px"},"fontFamily":{"headline-lg":["Plus Jakarta Sans"],"title-lg":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"body-lg":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"]},"fontSize":{"headline-lg":["40px",{"lineHeight":"48px","letterSpacing":"-0.01em","fontWeight":"700"}],"title-lg":["24px",{"lineHeight":"32px","fontWeight":"600"}],"headline-md":["32px",{"lineHeight":"40px","fontWeight":"700"}],"label-sm":["12px",{"lineHeight":"16px","fontWeight":"600"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"display-lg":["64px",{"lineHeight":"72px","letterSpacing":"-0.02em","fontWeight":"800"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"label-md":["14px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}]}}}}</script><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-on-background"><aside class="fixed left-0 top-0 h-full w-[280px] bg-surface-container-low z-50 flex flex-col shadow-[0_0_24px_rgba(0,0,0,0.2)]"><div class="p-gutter flex items-center gap-base mb-stack-lg"><img alt="EV Finder" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLu_CXdkNDKcV1EIY9s2UdqAZqzcxqTEzzdsEEx5RuYWKwqy4AfopVvcjyAtKlKFlhfZ2t36BphQhWiAcJobQkJN8J1eQZIxJNamq66ySlRhU5ad-hndAcyNvDb1HOh3d5rvvp_nS-LeHmzJ97Usk0kj22Ya7yrsuW_MSxpmExcwJZoRqhuPNoMfmeMc12CEJQwnHMt8ZMxG-0ch4RlMUzhR_Esxf--Zueku-jblU7xXC_HJzJXewjKSe58"/><span class="font-title-lg text-title-lg text-primary tracking-tight">EV Finder</span></div><nav class="flex-1 px-base space-y-base" data-active-classes="bg-primary-container text-on-primary-container font-semibold"><a class="flex items-center px-stack-md py-stack-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all duration-150" data-path="dashboard" href="#"><span class="material-symbols-outlined mr-3">dashboard</span>Dashboard</a><a class="flex items-center px-stack-md py-stack-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all duration-150" data-path="stations" href="#"><span class="material-symbols-outlined mr-3">ev_station</span>Stations</a><a class="flex items-center px-stack-md py-stack-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all duration-150" data-path="services" href="#"><span class="material-symbols-outlined mr-3">build</span>Services</a><a class="flex items-center px-stack-md py-stack-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all duration-150" data-path="bookings" href="#"><span class="material-symbols-outlined mr-3">calendar_today</span>Bookings</a><a aria-current="page" class="flex items-center px-stack-md py-stack-sm rounded-xl transition-all duration-150 bg-primary-container text-on-primary-container font-semibold" data-path="reviews" href="#"><span class="material-symbols-outlined mr-3">star</span>Reviews</a><a class="flex items-center px-stack-md py-stack-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all duration-150" data-path="activity" href="#"><span class="material-symbols-outlined mr-3">analytics</span>Activity</a><a class="flex items-center px-stack-md py-stack-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all duration-150" data-path="verification" href="#"><span class="material-symbols-outlined mr-3">verified_user</span>Verification</a></nav><div class="p-gutter border-t border-outline-variant"><div class="flex items-center gap-3"><img alt="Profile" class="w-10 h-10 rounded-full border border-outline-variant object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuoXaC9OdwUGwgyrGbJkQn6uUBq2johVpkp3RWJftTAarKJ2V5MPIuWKbV7Sfx7X5oevkpyQCSyE8JV3PvM_HS4NDwMoLQk81DUn9KDYdsuboE3Y4tgZczhnhpHw8eSplaK7lX_m5RPLykESE2a7m376Sems-zg7xWSiSeItnJAARQuV3YNcfq1FKMFlRPPzz8JusYgt7yIvaWz3MY0YClyfIOV0w1Bp9QR6wgSzavIJ5u-MqTMMUqjzGg"/><div class="flex flex-col"><span class="font-label-md text-label-md text-on-surface">Operator Admin</span><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Verified</span></div></div></div></aside><div class="pl-[280px]"><header class="fixed top-0 left-[280px] right-0 h-16 bg-surface/80 backdrop-blur-xl z-40 px-gutter flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.1)]"><div class="flex items-center gap-base"><span class="material-symbols-outlined text-primary">bolt</span><span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Operator Command Center</span></div><div class="flex items-center gap-stack-md"><button class="p-2 rounded-full hover:bg-surface-container text-on-surface-variant"><span class="material-symbols-outlined">notifications</span></button><button class="p-2 rounded-full hover:bg-surface-container text-on-surface-variant"><span class="material-symbols-outlined">settings</span></button></div></header><main class="relative pt-16 bg-background min-h-screen"><div class="flex flex-col w-full">
+<div class="px-gutter pt-stack-lg pb-stack-md flex items-center justify-between">
+<div class="flex flex-col gap-2">
+<h1 class="font-headline-md text-headline-md text-on-background">Customer Sentiment Analysis</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Real-time feedback and rating distribution across your fleet.</p>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-surface-container hover:bg-surface-container-high transition-colors px-4 py-2 rounded-lg flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+<span class="font-label-md text-label-md">Filter by Station</span>
+</button>
+<button class="bg-primary hover:bg-primary-fixed-dim transition-colors px-4 py-2 rounded-lg flex items-center gap-2 text-on-primary shadow-[0_4px_12px_rgba(34,197,94,0.2)]">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span class="font-label-md text-label-md">Export Data</span>
+</button>
+</div>
+</div>
+<div class="px-gutter grid grid-cols-12 gap-gutter mb-stack-lg">
+<div class="col-span-12 lg:col-span-4 bg-surface-container rounded-2xl p-6 shadow-md relative overflow-hidden group">
+<div class="absolute -right-12 -top-12 w-48 h-48 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-500"></div>
+<h2 class="font-title-lg text-title-lg text-on-surface mb-2 relative z-10">Global Rating</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mb-6 relative z-10">Average across 1,248 verified sessions.</p>
+<div class="flex items-baseline gap-4 mb-4 relative z-10">
+<span class="font-display-lg text-display-lg text-primary tracking-tighter">4.8</span>
+<span class="font-title-lg text-title-lg text-on-surface-variant">/ 5.0</span>
+</div>
+<div class="flex gap-1 mb-8 relative z-10">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary">star_half</span>
+</div>
+<div class="space-y-3 relative z-10">
+<div class="flex items-center gap-3">
+<span class="font-label-sm text-label-sm text-on-surface-variant w-4">5</span>
+<div class="h-2 flex-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[75%] rounded-full"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant w-8 text-right">75%</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label-sm text-label-sm text-on-surface-variant w-4">4</span>
+<div class="h-2 flex-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary/80 w-[15%] rounded-full"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant w-8 text-right">15%</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label-sm text-label-sm text-on-surface-variant w-4">3</span>
+<div class="h-2 flex-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary-fixed w-[5%] rounded-full"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant w-8 text-right">5%</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label-sm text-label-sm text-on-surface-variant w-4">2</span>
+<div class="h-2 flex-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-error-container w-[3%] rounded-full"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant w-8 text-right">3%</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label-sm text-label-sm text-on-surface-variant w-4">1</span>
+<div class="h-2 flex-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-error w-[2%] rounded-full"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant w-8 text-right">2%</span>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-8 bg-surface-container rounded-2xl p-6 shadow-md flex flex-col">
+<div class="flex items-center justify-between mb-6">
+<div>
+<h2 class="font-title-lg text-title-lg text-on-surface mb-1">Sentiment Trends</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">30-day moving average of user satisfaction.</p>
+</div>
+<div class="flex items-center gap-2 bg-surface-variant rounded-lg p-1">
+<button class="px-3 py-1 rounded-md bg-surface-container-high text-on-surface font-label-sm text-label-sm shadow-sm">30 Days</button>
+<button class="px-3 py-1 rounded-md text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm">90 Days</button>
+<button class="px-3 py-1 rounded-md text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm">1 Year</button>
+</div>
+</div>
+<div class="flex-1 relative min-h-[200px] w-full flex items-end justify-between px-2 pb-6">
+<svg class="absolute inset-0 w-full h-full preserve-3d" preserveaspectratio="none" viewbox="0 0 100 50">
+<defs>
+<lineargradient id="trendGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="var(--tw-colors-primary)" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="var(--tw-colors-primary)" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0 40 Q 10 35, 20 42 T 40 25 T 60 30 T 80 15 T 100 10 L 100 50 L 0 50 Z" fill="url(#trendGradient)"></path>
+<path class="drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]" d="M0 40 Q 10 35, 20 42 T 40 25 T 60 30 T 80 15 T 100 10" fill="none" stroke="var(--tw-colors-primary)" stroke-width="0.5"></path>
+</svg>
+<div class="absolute bottom-0 left-0 w-full flex justify-between px-4 text-on-surface-variant font-label-sm text-label-sm">
+<span>Week 1</span>
+<span>Week 2</span>
+<span>Week 3</span>
+<span>Week 4</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 pt-4 mt-auto">
+<div class="bg-surface-variant/50 rounded-xl p-4">
+<span class="block font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Positive</span>
+<span class="font-title-lg text-title-lg text-primary">82%</span>
+</div>
+<div class="bg-surface-variant/50 rounded-xl p-4">
+<span class="block font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Neutral</span>
+<span class="font-title-lg text-title-lg text-on-surface">12%</span>
+</div>
+<div class="bg-surface-variant/50 rounded-xl p-4">
+<span class="block font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">Negative</span>
+<span class="font-title-lg text-title-lg text-error">6%</span>
+</div>
+</div>
+</div>
+</div>
+<div class="px-gutter pb-stack-lg">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-md text-headline-md text-on-background">Recent Feedback</h3>
+<div class="flex gap-2">
+<button class="px-4 py-2 rounded-full border border-primary text-primary font-label-md text-label-md hover:bg-primary/10 transition-colors">All</button>
+<button class="px-4 py-2 rounded-full border border-outline text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">Needs Reply</button>
+<button class="px-4 py-2 rounded-full border border-outline text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-error"></span> Negative</button>
+</div>
+</div>
+<div class="space-y-4">
+<div class="bg-surface-container rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow group flex flex-col md:flex-row gap-6">
+<div class="flex-shrink-0 flex flex-col items-center md:items-start gap-2 w-32">
+<div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A futuristic, sleek electric vehicle charging station glowing with bright neon green energy under a dark, moody metropolitan sky. Cinematic lighting, photorealistic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDc0PDkz0VF46glbzCirknsLVznanXrtNIilBihmtfczuSlZkYtFMeAr16Tq9vh3oSDUO9B8hRu6gH8qgQj-MimbUYO521tKrqaaMJ-tgnp36pUgq8Wiwh-HpZP1MODgF0zxZ6wzcOeUU2Jww0DbjNRSfKv6I9L2LyrRyWc6ldMVmFocsQ-eFHMSvrWIbBKabXvBSH_LXBayeohdan6eiHWbG8KhiTMX-7SBqnvwQydhwrn0UjzsKVo"/>
+</div>
+<span class="font-label-md text-label-md text-on-surface text-center md:text-left">Sarah M.</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">2 hours ago</span>
+</div>
+<div class="flex-1">
+<div class="flex items-start justify-between mb-2">
+<div class="flex gap-2 items-center">
+<div class="flex text-primary">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Verified Session</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Station Alpha-7
+            </span>
+</div>
+<h4 class="font-title-lg text-title-lg text-on-surface mb-2">Lightning fast charge!</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4">Pulled up to Station Alpha-7 and was charging within seconds. The new 350kW chargers are incredible. Keep expanding this network!</p>
+<div class="flex items-center gap-4">
+<button class="text-primary hover:text-primary-fixed font-label-md text-label-md flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]">reply</span> Reply
+            </button>
+<button class="text-on-surface-variant hover:text-on-surface font-label-md text-label-md flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]">thumb_up</span> 12
+            </button>
+</div>
+</div>
+</div>
+<div class="bg-surface-container border-l-4 border-error rounded-r-xl rounded-l-sm p-6 shadow-sm hover:shadow-md transition-shadow group flex flex-col md:flex-row gap-6">
+<div class="flex-shrink-0 flex flex-col items-center md:items-start gap-2 w-32">
+<div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center font-title-lg text-on-surface">JD</div>
+<span class="font-label-md text-label-md text-on-surface text-center md:text-left">John D.</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">5 hours ago</span>
+</div>
+<div class="flex-1">
+<div class="flex items-start justify-between mb-2">
+<div class="flex gap-2 items-center">
+<div class="flex text-error">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px] text-surface-variant" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px] text-surface-variant" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px] text-surface-variant" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="bg-error/10 text-error px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Critical</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Downtown Hub
+            </span>
+</div>
+<h4 class="font-title-lg text-title-lg text-on-surface mb-2">Screen glare making it unusable</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4">The UI on charger #3 at the Downtown Hub is completely washed out by the afternoon sun. I couldn't read the authentication code. Please install awnings.</p>
+<div class="bg-surface-variant/30 rounded-lg p-4 mb-4 border border-outline-variant">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-[16px]">support_agent</span>
+<span class="font-label-md text-label-md text-on-surface">Operator Response Draft</span>
+</div>
+<textarea class="w-full bg-surface-container rounded-md p-3 text-on-surface font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-primary border border-outline-variant resize-none" placeholder="Type your response..." rows="2">Hi John, we apologize for the inconvenience. We've logged a maintenance ticket to evaluate screen visibility at the Downtown Hub.</textarea>
+<div class="flex justify-end mt-2 gap-2">
+<button class="px-3 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-sm text-label-sm">Cancel</button>
+<button class="px-3 py-1.5 rounded-md bg-primary text-on-primary hover:bg-primary-fixed transition-colors font-label-sm text-label-sm shadow-[0_2px_8px_rgba(34,197,94,0.3)]">Post Reply</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>
