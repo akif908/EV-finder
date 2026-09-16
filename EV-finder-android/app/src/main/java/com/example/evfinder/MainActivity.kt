@@ -1,30 +1,29 @@
 package com.example.evfinder
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.ElectricCar
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -36,8 +35,13 @@ import com.example.evfinder.feature.booking.BookingsScreen
 import com.example.evfinder.feature.booking.BookingScreen
 import com.example.evfinder.feature.booking.PaymentScreen
 import com.example.evfinder.feature.home.HomeScreen
+import com.example.evfinder.feature.map.MapScreen
+import com.example.evfinder.feature.operator.OperatorApp
+import com.example.evfinder.feature.profile.ProfileScreen
 import com.example.evfinder.feature.station.StationDetailScreen
+import com.example.evfinder.feature.vehicle.VehiclesScreen
 import com.example.evfinder.ui.theme.EVFinderTheme
+import com.example.evfinder.ui.theme.EvColors
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,11 +49,19 @@ class MainActivity : ComponentActivity() {
         val tokenStore = TokenStore(this)
         setContent {
             EVFinderTheme {
-                // Start at login on first launch, home when a JWT is already stored.
-                EVFinderApp(
-                    startDestination = if (tokenStore.isLoggedIn) "home" else "login",
-                    tokenStore = tokenStore
-                )
+                // Role-based entry (context §9): operators get their own shell;
+                // every rule is still enforced by the backend.
+                if (tokenStore.role == "OPERATOR") {
+                    OperatorApp(onSessionExpired = {
+                        tokenStore.clear()
+                        recreate() // relaunches at login
+                    })
+                } else {
+                    EVFinderApp(
+                        startDestination = if (tokenStore.isLoggedIn) "home" else "login",
+                        tokenStore = tokenStore
+                    )
+                }
             }
         }
     }
@@ -58,70 +70,85 @@ class MainActivity : ComponentActivity() {
 private data class BottomDestination(
     val route: String,
     val labelRes: Int,
-    val icon: ImageVector
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
 )
 
-// USER navigation per project context §8.
-// OPERATOR/ADMIN screens will swap this set based on the logged-in role
-// (real authorization always enforced by the backend).
 private val userBottomDestinations = listOf(
-    BottomDestination("home", R.string.nav_home, Icons.Filled.Home),
-    BottomDestination("map", R.string.nav_map, Icons.Filled.Map),
-    BottomDestination("bookings", R.string.nav_bookings, Icons.Filled.CalendarMonth),
-    BottomDestination("vehicles", R.string.nav_vehicles, Icons.Filled.ElectricCar),
-    BottomDestination("profile", R.string.nav_profile, Icons.Filled.Person)
+    BottomDestination("home",     R.string.nav_home,     Icons.Filled.EvStation,    Icons.Outlined.EvStation),
+    BottomDestination("bookings", R.string.nav_bookings, Icons.Filled.CalendarMonth,Icons.Outlined.CalendarMonth),
+    BottomDestination("vehicles", R.string.nav_vehicles, Icons.Filled.ElectricCar,  Icons.Outlined.ElectricCar),
+    BottomDestination("profile",  R.string.nav_profile,  Icons.Filled.Person,       Icons.Outlined.Person),
 )
 
 private val bottomRoutes = userBottomDestinations.map { it.route }.toSet()
+
+// Screens reached from the Stations tab. The bottom bar stays visible here so the
+// user can jump to any tab in the middle of the booking flow.
+private val stationFlowRoutes = setOf("station/{stationId}", "book/{serviceId}", "payment/{bookingId}")
 
 @Composable
 fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute in bottomRoutes
+    val showBottomBar = currentRoute in bottomRoutes || currentRoute in stationFlowRoutes
+    // Booking-flow screens highlight the tab they belong to (Stations).
+    val activeRoute = if (currentRoute in bottomRoutes) currentRoute else "home"
 
     Scaffold(
+        containerColor = EvColors.Background,
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    userBottomDestinations.forEach { dest ->
-                        val selected = currentRoute == dest.route
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(dest.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(dest.icon, contentDescription = stringResource(dest.labelRes)) },
-                            label = { Text(stringResource(dest.labelRes)) }
-                        )
+                EvBottomNav(
+                    destinations = userBottomDestinations,
+                    currentRoute = activeRoute,
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            // Pop the start destination inclusively so every tab switch
+                            // re-pushes a clean entry. Without `inclusive = true`, the
+                            // first time a tab is re-tapped after `popUpTo("home")` left
+                            // home on the back stack, the controller short-circuits the
+                            // navigation (no-op) because the start destination is still
+                            // present and `launchSingleTop` + `restoreState` collapse to
+                            // a no-op for the home tab specifically.
+                            popUpTo("home") { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
-                }
+                )
             }
         }
     ) { padding ->
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier.padding(if (showBottomBar) padding else androidx.compose.foundation.layout.PaddingValues(0.dp))
+            modifier = Modifier.padding(if (showBottomBar) padding else PaddingValues(0.dp))
         ) {
-            // ---- Auth (no bottom bar) ----
+            // ---- Auth ----
             composable("login") {
+                val activityContext = LocalContext.current
                 LoginScreen(
                     onAuthenticated = {
-                        navController.navigate("home") { popUpTo(0) { inclusive = true } }
+                        if (tokenStore.role == "OPERATOR") {
+                            // operators enter their own shell: recreate activity
+                            (activityContext as? ComponentActivity)?.recreate()
+                        } else {
+                            navController.navigate("home") { popUpTo(0) { inclusive = true } }
+                        }
                     },
                     onGoToRegister = { navController.navigate("register") }
                 )
             }
             composable("register") {
+                val activityContext = LocalContext.current
                 RegisterScreen(
                     onAuthenticated = {
-                        navController.navigate("home") { popUpTo(0) { inclusive = true } }
+                        if (tokenStore.role == "OPERATOR") {
+                            (activityContext as? ComponentActivity)?.recreate()
+                        } else {
+                            navController.navigate("home") { popUpTo(0) { inclusive = true } }
+                        }
                     },
                     onBackToLogin = { navController.popBackStack() }
                 )
@@ -131,6 +158,7 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
             composable("home") {
                 HomeScreen(
                     onStationClick = { stationId -> navController.navigate("station/$stationId") },
+                    onOpenMap = { navController.navigate("map") },
                     onSessionExpired = {
                         tokenStore.clear()
                         navController.navigate("login") { popUpTo(0) { inclusive = true } }
@@ -143,28 +171,68 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                     navController.navigate("login") { popUpTo(0) { inclusive = true } }
                 })
             }
-            userBottomDestinations
-                .filter { it.route != "home" && it.route != "bookings" }
-                .forEach { dest ->
-                    composable(dest.route) { PlaceholderScreen(stringResource(dest.labelRes)) }
-                }
+            // Map: pushed from the Home dashboard (fullscreen)
+            composable("map") {
+                val context = LocalContext.current
+                MapScreen(
+                    onStationClick = { stationId ->
+                        navController.navigate("station/$stationId")
+                    },
+                    onGetDirections = { lat, lng, name ->
+                        // same Google Maps handoff as station details
+                        val gmm = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=$lat,$lng"))
+                            .setPackage("com.google.android.apps.maps")
+                        try {
+                            context.startActivity(gmm)
+                        } catch (e: Exception) {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lng?q=$lat,$lng($name)"))
+                            )
+                        }
+                    }
+                )
+            }
+            // Profile tab
+            composable("profile") {
+                ProfileScreen(onLogout = {
+                    tokenStore.clear()
+                    navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                })
+            }
+            // Vehicles tab (full CRUD)
+            composable("vehicles") {
+                VehiclesScreen()
+            }
 
-            // ---- Station details (pushed, no bottom bar) ----
+            // ---- Station details ----
             composable("station/{stationId}") { entry ->
                 val stationId = entry.arguments?.getString("stationId") ?: return@composable
+                val context = LocalContext.current // capture in composable scope
                 StationDetailScreen(
                     stationId = stationId,
-                    onBookService = { _, serviceId ->
-                        navController.navigate("book/$serviceId")
+                    onBack = { navController.popBackStack() },
+                    onBookService = { _, serviceId -> navController.navigate("book/$serviceId") },
+                    onGetDirections = { lat, lng, name ->
+                        // Google Maps turn-by-turn if installed, else any geo app
+                        val gmm = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=$lat,$lng"))
+                            .setPackage("com.google.android.apps.maps")
+                        try {
+                            context.startActivity(gmm)
+                        } catch (e: Exception) {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lng?q=$lat,$lng($name)"))
+                            )
+                        }
                     }
                 )
             }
 
-            // ---- Booking flow (pushed, no bottom bar) ----
+            // ---- Booking flow ----
             composable("book/{serviceId}") { entry ->
                 val serviceId = entry.arguments?.getString("serviceId") ?: return@composable
                 BookingScreen(
                     serviceId = serviceId,
+                    onBack = { navController.popBackStack() },
                     onBookingCreated = { bookingId ->
                         navController.navigate("payment/$bookingId") {
                             popUpTo("book/$serviceId") { inclusive = true }
@@ -176,9 +244,10 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                 val bookingId = entry.arguments?.getString("bookingId") ?: return@composable
                 PaymentScreen(
                     bookingId = bookingId,
+                    onBack = { navController.popBackStack() },
                     onDone = {
                         navController.navigate("bookings") {
-                            popUpTo("home")
+                            popUpTo("home") { inclusive = true }
                             launchSingleTop = true
                         }
                     }
@@ -188,13 +257,83 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
     }
 }
 
+// ─── Premium bottom navigation bar ────────────────────────────────────────────
+@Composable
+private fun EvBottomNav(
+    destinations: List<BottomDestination>,
+    currentRoute: String?,
+    onNavigate: (String) -> Unit
+) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .background(EvColors.Background)
+    ) {
+        // Top border line
+        Divider(
+            Modifier.fillMaxWidth().align(Alignment.TopCenter),
+            color = EvColors.SurfaceBorder,
+            thickness = 0.5.dp
+        )
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp)
+                .navigationBarsPadding(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            destinations.forEach { dest ->
+                val selected = currentRoute == dest.route
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .let {
+                            if (selected) it.background(EvColors.PrimaryDim) else it
+                        }
+                        .clickable { onNavigate(dest.route) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .widthIn(min = 56.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        if (selected) dest.selectedIcon else dest.unselectedIcon,
+                        contentDescription = stringResource(dest.labelRes),
+                        tint = if (selected) EvColors.Primary else EvColors.OnSurfaceVar,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Text(
+                        stringResource(dest.labelRes),
+                        color = if (selected) EvColors.Primary else EvColors.OnSurfaceVar,
+                        fontSize = 10.sp,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Suppress("DEPRECATION")
+@Composable
+private fun Divider(modifier: Modifier = Modifier, color: androidx.compose.ui.graphics.Color = EvColors.SurfaceBorder, thickness: androidx.compose.ui.unit.Dp = 1.dp) {
+    HorizontalDivider(modifier, color = color, thickness = thickness)
+}
+
 @Composable
 private fun PlaceholderScreen(title: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            "$title — screen to be implemented",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(EvColors.Background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Filled.Construction, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(44.dp))
+            Spacer(Modifier.height(12.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
+            Text("Coming soon", color = EvColors.OnSurfaceVar, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
