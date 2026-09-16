@@ -38,7 +38,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             call().fold(
                 onSuccess = { auth ->
-                    tokenStore.save(auth.token, auth.userId, auth.role)
+                    tokenStore.save(auth.token, auth.userId, auth.role, auth.name, auth.email)
                     _uiState.value = AuthUiState(success = true)
                 },
                 onFailure = { e ->

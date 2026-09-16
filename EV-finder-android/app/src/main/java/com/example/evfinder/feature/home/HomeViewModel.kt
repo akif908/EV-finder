@@ -6,6 +6,7 @@ import com.example.evfinder.EvFinderApp
 import com.example.evfinder.core.model.BookingDto
 import com.example.evfinder.core.model.StationDto
 import com.example.evfinder.core.network.AvailabilitySocket
+import com.example.evfinder.core.network.OverpassClient
 import com.example.evfinder.feature.booking.BookingRepository
 import com.example.evfinder.feature.station.StationRepository
 import kotlinx.coroutines.FlowPreview
@@ -24,7 +25,9 @@ data class HomeUiState(
     val upcoming: BookingDto? = null,
     val totalBookings: Int = 0,
     val liveUpdates: Boolean = false,
-    val liveTick: Int = 0
+    val liveTick: Int = 0,
+    // real-world fuel/LPG POIs (OpenStreetMap) for the map preview
+    val pois: List<OverpassClient.Poi> = emptyList()
 )
 
 class HomeViewModel : ViewModel() {
@@ -40,6 +43,7 @@ class HomeViewModel : ViewModel() {
     init {
         loadDashboard()
         loadStations()
+        loadPois()
 
         // debounced search
         viewModelScope.launch {
@@ -69,6 +73,12 @@ class HomeViewModel : ViewModel() {
         loadDashboard()
     }
 
+    /** Background refresh without the loading spinner — used when re-entering the tab. */
+    fun silentRefresh() {
+        loadStations(_uiState.value.query, silent = true)
+        loadDashboard(silent = true)
+    }
+
     private fun loadDashboard(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) _uiState.value = _uiState.value.copy(loading = true)
@@ -88,6 +98,15 @@ class HomeViewModel : ViewModel() {
                     if (!silent) _uiState.value = _uiState.value.copy(loading = false, error = e.message)
                 }
             )
+        }
+    }
+
+    /** One-time fetch of fuel/LPG stations around Dhaka for the map preview. */
+    private fun loadPois() {
+        viewModelScope.launch {
+            // fixed metro bbox (south, west, north, east)
+            val pois = OverpassClient.fuelAndLpg(23.68, 90.32, 23.90, 90.48)
+            _uiState.value = _uiState.value.copy(pois = pois)
         }
     }
 

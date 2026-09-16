@@ -1,16 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Design system from the UI reference (Voltage Mobility / dark + green) -->
+    <!-- EV Finder Design System – Voltage Mobility: near-black dark + electric green -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="ev_background">#FF131313</color>
-    <color name="ev_surface">#FF201F1F</color>
-    <color name="ev_surface_high">#FF2A2A2A</color>
-    <color name="ev_on_surface">#FFE5E2E1</color>
-    <color name="ev_on_surface_variant">#FFBCCBB9</color>
-    <color name="ev_primary">#FF4BE277</color>
-    <color name="ev_on_primary">#FF003915</color>
-    <color name="ev_primary_container">#FF22C55E</color>
-    <color name="ev_error">#FFFFB4AB</color>
-    <color name="ev_outline">#FF869585</color>
+
+    <!-- Dark surfaces -->
+    <color name="ev_background">#FF0D0D0D</color>
+    <color name="ev_surface">#FF1A1A1A</color>
+    <color name="ev_surface_high">#FF242424</color>
+    <color name="ev_surface_border">#FF2E2E2E</color>
+
+    <!-- Text -->
+    <color name="ev_on_background">#FFEEEEEE</color>
+    <color name="ev_on_surface">#FFDDDDDD</color>
+    <color name="ev_on_surface_variant">#FF888888</color>
+
+    <!-- Brand green -->
+    <color name="ev_primary">#FF39E075</color>
+    <color name="ev_primary_dark">#FF27A854</color>
+    <color name="ev_primary_dim">#FF1A3A27</color>
+    <color name="ev_on_primary">#FF001E0D</color>
+    <color name="ev_accent">#FF4AE886</color>
+
+    <!-- Status -->
+    <color name="ev_error">#FFFF5C5C</color>
+    <color name="ev_warning">#FFFFBB33</color>
 </resources>

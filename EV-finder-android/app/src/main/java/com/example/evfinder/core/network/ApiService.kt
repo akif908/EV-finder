@@ -38,6 +38,12 @@ interface ApiService {
     @POST("api/vehicles")
     suspend fun addVehicle(@Body body: AddVehicleRequest): Response<VehicleDto>
 
+    @PUT("api/vehicles/{id}")
+    suspend fun updateVehicle(@Path("id") id: String, @Body body: AddVehicleRequest): Response<VehicleDto>
+
+    @DELETE("api/vehicles/{id}")
+    suspend fun deleteVehicle(@Path("id") id: String): Response<Unit>
+
     // ---- Availability ----
     @GET("api/services/{serviceId}/slots")
     suspend fun getSlots(
@@ -58,4 +64,37 @@ interface ApiService {
     // ---- Simulated payment ----
     @POST("api/payments/{bookingId}")
     suspend fun pay(@Path("bookingId") bookingId: String, @Body body: PaymentRequestDto): Response<PaymentDto>
+
+    // ---- Operator: station & service management ----
+    @GET("api/operator/stations/my")
+    suspend fun operatorMyStations(): Response<List<StationDto>>
+
+    @POST("api/operator/stations")
+    suspend fun operatorCreateStation(@Body body: OperatorStationRequest): Response<StationDto>
+
+    @PUT("api/operator/stations/{id}")
+    suspend fun operatorUpdateStation(@Path("id") id: String, @Body body: OperatorStationRequest): Response<StationDto>
+
+    @PUT("api/operator/stations/{id}/status")
+    suspend fun operatorSetStationStatus(@Path("id") id: String, @Query("status") status: String): Response<StationDto>
+
+    @POST("api/operator/stations/{id}/services")
+    suspend fun operatorAddService(@Path("id") id: String, @Body body: OperatorServiceRequest): Response<ServiceDto>
+
+    @PUT("api/operator/stations/{stationId}/services/{serviceId}")
+    suspend fun operatorUpdateService(
+        @Path("stationId") stationId: String,
+        @Path("serviceId") serviceId: String,
+        @Body body: OperatorServiceRequest
+    ): Response<ServiceDto>
+
+    @DELETE("api/operator/stations/{stationId}/services/{serviceId}")
+    suspend fun operatorDeleteService(
+        @Path("stationId") stationId: String,
+        @Path("serviceId") serviceId: String
+    ): Response<Unit>
+
+    // ---- Operator: bookings at owned stations ----
+    @GET("api/operator/bookings")
+    suspend fun operatorBookings(): Response<List<BookingDto>>
 }
