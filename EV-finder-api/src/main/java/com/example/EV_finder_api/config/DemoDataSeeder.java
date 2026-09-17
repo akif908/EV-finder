@@ -2,6 +2,7 @@ package com.example.EV_finder_api.config;
 
 import com.example.EV_finder_api.entity.*;
 import com.example.EV_finder_api.repository.StationRepository;
+import com.example.EV_finder_api.repository.StationReviewRepository;
 import com.example.EV_finder_api.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,12 +25,14 @@ public class DemoDataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final StationRepository stationRepository;
+    private final StationReviewRepository reviewRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(UserRepository userRepository, StationRepository stationRepository,
-                          PasswordEncoder passwordEncoder) {
+                          StationReviewRepository reviewRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.stationRepository = stationRepository;
+        this.reviewRepository = reviewRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -74,6 +77,44 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         System.out.println("[DemoDataSeeder] Demo accounts ensured (operator@ev.com/operator123, admin@ev.com/admin123); "
                 + (stationRepository.count() - before) + " demo station(s) added, " + stationRepository.count() + " total");
+
+        seedReviews();
+    }
+
+    /** Demo reviewer accounts + one review per reviewer per demo station (skipped if already present). */
+    private void seedReviews() {
+        User ayesha = getOrCreateUser("user@ev.com", "user123", "Ayesha Rahman", Role.USER);
+        User rakib = getOrCreateUser("rakib@ev.com", "user123", "Rakib Islam", Role.USER);
+        User nusrat = getOrCreateUser("nusrat@ev.com", "user123", "Nusrat Jahan", Role.USER);
+
+        java.util.Map<String, Station> byName = stationRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(Station::getName, s -> s));
+
+        seedReview(byName, "GreenPulse Hub Banani", ayesha, 5, "Fast chargers, clean lounge. Highly recommended.");
+        seedReview(byName, "GreenPulse Hub Banani", rakib, 4, "Good location, slight wait on weekends.");
+        seedReview(byName, "GreenPulse Hub Banani", nusrat, 4, "Reliable CCS2, helpful staff.");
+        seedReview(byName, "Dhanmondi Swap Point", ayesha, 4, "Swap takes under two minutes.");
+        seedReview(byName, "Dhanmondi Swap Point", rakib, 5, "Perfect for my three-wheeler route.");
+        seedReview(byName, "Dhanmondi Swap Point", nusrat, 3, "Gets busy in the evening.");
+        seedReview(byName, "Uttara UltraCharge", ayesha, 5, "350 kW is no joke - 10 to 80 in minutes.");
+        seedReview(byName, "Uttara UltraCharge", rakib, 5, "Best corridor stop on the route.");
+        seedReview(byName, "Uttara UltraCharge", nusrat, 5, "Premium pricing but worth it.");
+        seedReview(byName, "Mirpur Community Chargers", ayesha, 4, "Affordable 22 kW top-up.");
+        seedReview(byName, "Mirpur Community Chargers", rakib, 3, "Only two guns, plan ahead.");
+        seedReview(byName, "Mirpur Community Chargers", nusrat, 4, "Quiet area, easy parking.");
+        seedReview(byName, "Old Dhaka Rapid Charge", ayesha, 2, "Queue was long and one gun was down.");
+        seedReview(byName, "Old Dhaka Rapid Charge", rakib, 3, "Okay for a quick top-up.");
+        seedReview(byName, "Old Dhaka Rapid Charge", nusrat, 2, "Needs maintenance.");
+    }
+
+    private void seedReview(java.util.Map<String, Station> stationsByName, String stationName,
+                            User user, int rating, String comment) {
+        Station station = stationsByName.get(stationName);
+        if (station == null) return;
+        if (reviewRepository.findByStationIdAndUserId(station.getId(), user.getId()).isPresent()) return;
+        reviewRepository.save(StationReview.builder()
+                .station(station).user(user).rating(rating).comment(comment)
+                .build());
     }
 
     private User getOrCreateUser(String email, String password, String name, Role role) {

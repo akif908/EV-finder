@@ -31,6 +31,20 @@ interface ApiService {
     @GET("api/stations/{id}")
     suspend fun getStation(@Path("id") id: String): Response<StationDto>
 
+    // ---- Reviews ----
+    @GET("api/stations/{stationId}/reviews")
+    suspend fun getReviews(@Path("stationId") stationId: String): Response<List<ReviewDto>>
+
+    @POST("api/stations/{stationId}/reviews")
+    suspend fun postReview(
+        @Path("stationId") stationId: String,
+        @Body body: ReviewRequest
+    ): Response<ReviewDto>
+
+    // ---- Single service (booking flow cost estimator) ----
+    @GET("api/services/{id}")
+    suspend fun getService(@Path("id") id: String): Response<ServiceDto>
+
     // ---- Vehicles ----
     @GET("api/vehicles/my")
     suspend fun getMyVehicles(): Response<List<VehicleDto>>

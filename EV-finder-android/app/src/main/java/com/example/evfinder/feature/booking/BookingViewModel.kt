@@ -3,6 +3,7 @@ package com.example.evfinder.feature.booking
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.evfinder.core.model.BookingDto
+import com.example.evfinder.core.model.ServiceDto
 import com.example.evfinder.core.model.SlotDto
 import com.example.evfinder.core.model.VehicleDto
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +14,7 @@ import java.time.format.DateTimeFormatter
 
 data class BookingUiState(
     val loading: Boolean = true,
+    val service: ServiceDto? = null,   // price/type for the cost estimator
     val vehicles: List<VehicleDto> = emptyList(),
     val selectedVehicleId: String? = null,
     val dates: List<LocalDate> = emptyList(),
@@ -35,6 +37,7 @@ class BookingViewModel(private val serviceId: String) : ViewModel() {
     val uiState: StateFlow<BookingUiState> = _uiState
 
     init {
+        loadService()
         loadVehicles()
         loadSlots()
     }
@@ -52,9 +55,9 @@ class BookingViewModel(private val serviceId: String) : ViewModel() {
         _uiState.value = _uiState.value.copy(selectedSlot = slot)
     }
 
-    fun addVehicle(vehicleType: String, registrationNo: String) {
+    fun addVehicle(vehicleType: String, registrationNo: String, batteryKwh: Double? = null) {
         viewModelScope.launch {
-            repository.addVehicle(vehicleType, registrationNo, null, null, null).fold(
+            repository.addVehicle(vehicleType, registrationNo, null, null, null, batteryKwh).fold(
                 onSuccess = { loadVehicles(it.id) },
                 onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
             )
@@ -80,6 +83,16 @@ class BookingViewModel(private val serviceId: String) : ViewModel() {
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    /** Service price/type feed the booking screen's cost estimator; failure is non-fatal. */
+    private fun loadService() {
+        viewModelScope.launch {
+            repository.service(serviceId).fold(
+                onSuccess = { sv -> _uiState.value = _uiState.value.copy(service = sv) },
+                onFailure = { /* estimator simply stays hidden */ }
+            )
+        }
     }
 
     private fun loadVehicles(selectFirst: String? = null) {

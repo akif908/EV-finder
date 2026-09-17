@@ -32,4 +32,8 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
                                                                 List<com.example.EV_finder_api.entity.BookingStatus> statuses,
                                                                 LocalDateTime start,
                                                                 LocalDateTime end);
+
+    /** Review eligibility: the user finished (not just made) a booking at this station. */
+    boolean existsByUserIdAndStationIdAndStatus(String userId, String stationId,
+                                                com.example.EV_finder_api.entity.BookingStatus status);
 }

@@ -88,6 +88,27 @@ CREATE TABLE station_services (
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
+-- STATION_REVIEWS  (STATION 1 -> N REVIEWS, 1 per user per station)
+-- avg rating is computed on read (GROUP BY station_id)
+-- ------------------------------------------------------------
+CREATE TABLE station_reviews (
+  review_id   VARCHAR(36) NOT NULL,
+  station_id  VARCHAR(36) NOT NULL,
+  user_id     VARCHAR(36) NOT NULL,
+  rating      INT NOT NULL,                     -- 1-5 stars
+  comment     VARCHAR(500) NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (review_id),
+  UNIQUE KEY uq_reviews_station_user (station_id, user_id),
+  KEY idx_reviews_station (station_id),
+  CONSTRAINT fk_reviews_station FOREIGN KEY (station_id)
+    REFERENCES stations(station_id) ON DELETE CASCADE,
+  CONSTRAINT fk_reviews_user FOREIGN KEY (user_id)
+    REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
 -- BOOKINGS
 -- Index supports the overlap-conflict query used to prevent
 -- double booking: WHERE service_id = ? AND status IN

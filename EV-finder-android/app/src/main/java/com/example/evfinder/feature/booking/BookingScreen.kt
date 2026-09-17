@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.evfinder.core.model.ServiceDto
+import com.example.evfinder.core.model.VehicleDto
 import com.example.evfinder.ui.components.*
 import com.example.evfinder.ui.theme.EvColors
 import java.time.LocalDate
@@ -298,6 +300,13 @@ fun BookingScreen(
                         Text("Time", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
                         Text("${slot.startTime.substring(11, 16)} – ${slot.endTime.substring(11, 16)}", style = MaterialTheme.typography.bodySmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
                     }
+                    Spacer(Modifier.height(10.dp))
+                    HorizontalDivider(color = EvColors.Primary.copy(0.2f))
+                    Spacer(Modifier.height(10.dp))
+                    CostEstimator(
+                        service = state.service,
+                        vehicle = state.vehicles.firstOrNull { it.id == state.selectedVehicleId }
+                    )
                 }
                 Spacer(Modifier.height(14.dp))
             }
@@ -314,6 +323,77 @@ fun BookingScreen(
         }
     }
 }
+
+// ─── Session cost estimator ───────────────────────────────────────────────────
+@Composable
+private fun CostEstimator(service: ServiceDto?, vehicle: VehicleDto?) {
+    if (service == null) return
+    val battery = vehicle?.batteryCapacityKwh
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Calculate, null, tint = EvColors.Primary, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Cost estimate",
+                style = MaterialTheme.typography.titleSmall,
+                color = EvColors.OnBackground,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        when {
+            service.serviceType == "BATTERY_SWAP" ->
+                EstimatorRow("Per battery swap", taka(service.pricePerUnit))
+
+            battery == null -> Text(
+                "Add your EV's battery capacity (kWh) to see a charging cost estimate.",
+                style = MaterialTheme.typography.bodySmall,
+                color = EvColors.OnSurfaceVar
+            )
+
+            else -> {
+                var targetText by remember { mutableStateOf("80") }
+                com.example.evfinder.feature.auth.EvTextField(
+                    value = targetText,
+                    onValueChange = { targetText = it },
+                    placeholder = "Charge to (%)"
+                )
+                Spacer(Modifier.height(8.dp))
+                val pct = targetText.toDoubleOrNull()?.coerceIn(0.0, 100.0)
+                if (pct == null) {
+                    Text(
+                        "Enter a target between 0 and 100.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = EvColors.Error
+                    )
+                } else {
+                    val energy = battery * pct / 100.0
+                    EstimatorRow("Energy needed", "%.1f kWh".format(energy))
+                    EstimatorRow("Est. session cost", taka(energy * service.pricePerUnit))
+                    Text(
+                        "Estimate only — final cost depends on the energy actually delivered.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = EvColors.OnSurfaceVar
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EstimatorRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+        Text(value, style = MaterialTheme.typography.bodySmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
+    }
+    Spacer(Modifier.height(6.dp))
+}
+
+private fun taka(amount: Double): String =
+    "৳" + amount.toBigDecimal()
+        .setScale(2, java.math.RoundingMode.HALF_UP)
+        .stripTrailingZeros().toPlainString()
 
 @Composable
 private fun SectionStep(number: String, title: String) {
@@ -333,9 +413,10 @@ private fun SectionStep(number: String, title: String) {
 }
 
 @Composable
-private fun AddVehicleInline(onAdd: (vehicleType: String, regNo: String) -> Unit) {
+private fun AddVehicleInline(onAdd: (vehicleType: String, regNo: String, batteryKwh: Double?) -> Unit) {
     var type by remember { mutableStateOf("ELECTRIC_CAR") }
     var regNo by remember { mutableStateOf("") }
+    var batteryKwh by remember { mutableStateOf("") }
 
     Column(
         Modifier
@@ -375,9 +456,15 @@ private fun AddVehicleInline(onAdd: (vehicleType: String, regNo: String) -> Unit
             leadingIcon = Icons.Outlined.DirectionsCar
         )
         Spacer(Modifier.height(10.dp))
+        com.example.evfinder.feature.auth.EvTextField(
+            value = batteryKwh,
+            onValueChange = { batteryKwh = it },
+            placeholder = "Battery capacity kWh (optional)"
+        )
+        Spacer(Modifier.height(10.dp))
         EvPrimaryButton(
             text = "Add Vehicle",
-            onClick = { onAdd(type, regNo.trim()) },
+            onClick = { onAdd(type, regNo.trim(), batteryKwh.trim().toDoubleOrNull()) },
             modifier = Modifier.fillMaxWidth(),
             enabled = regNo.isNotBlank()
         )

@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,9 +20,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.evfinder.core.model.ReviewDto
 import com.example.evfinder.core.model.StationDto
+import com.example.evfinder.feature.auth.EvTextField
 import com.example.evfinder.ui.components.*
 import com.example.evfinder.ui.theme.EvColors
+import kotlinx.coroutines.launch
 
 /**
  * Premium Station details + services – redesigned.
@@ -34,16 +38,25 @@ fun StationDetailScreen(
     onGetDirections: (latitude: Double, longitude: Double, name: String) -> Unit
 ) {
     var station by remember { mutableStateOf<StationDto?>(null) }
+    var reviews by remember { mutableStateOf<List<ReviewDto>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var showReviewDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(stationId) {
+    suspend fun loadAll() {
         StationRepository().getStation(stationId).fold(
             onSuccess = { station = it },
             onFailure = { error = it.message }
         )
+        StationRepository().getReviews(stationId).fold(
+            onSuccess = { reviews = it },
+            onFailure = { reviews = emptyList() }   // reviews are optional; station still renders
+        )
         loading = false
     }
+
+    LaunchedEffect(stationId) { loadAll() }
 
     when {
         loading -> Column(
@@ -78,7 +91,25 @@ fun StationDetailScreen(
             }
         }
 
-        station != null -> StationDetailContent(station!!, onBack, onBookService, onGetDirections)
+        station != null -> StationDetailContent(
+            station = station!!,
+            reviews = reviews,
+            onBack = onBack,
+            onBookService = onBookService,
+            onGetDirections = onGetDirections,
+            onWriteReview = { showReviewDialog = true }
+        )
+    }
+
+    if (showReviewDialog && station != null) {
+        ReviewDialog(
+            stationId = station!!.id,
+            onDismiss = { showReviewDialog = false },
+            onSubmitted = {
+                showReviewDialog = false
+                scope.launch { loadAll() }   // refresh avg rating + review list
+            }
+        )
     }
 }
 
@@ -122,9 +153,11 @@ private fun FlowBackButton(onBack: () -> Unit) {
 @Composable
 private fun StationDetailContent(
     station: StationDto,
+    reviews: List<ReviewDto>,
     onBack: () -> Unit,
     onBookService: (String, String) -> Unit,
-    onGetDirections: (latitude: Double, longitude: Double, name: String) -> Unit
+    onGetDirections: (latitude: Double, longitude: Double, name: String) -> Unit,
+    onWriteReview: () -> Unit
 ) {
     LazyColumn(
         Modifier
@@ -175,6 +208,19 @@ private fun StationDetailContent(
                         Icon(Icons.Filled.LocationOn, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(14.dp))
                         Text(it, style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
                     }
+                }
+                // Average rating from station reviews
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Spacer(Modifier.height(4.dp))
+                    Icon(Icons.Filled.Star, null, tint = EvColors.Warning, modifier = Modifier.size(14.dp))
+                    Text(
+                        if (station.reviewCount > 0) {
+                            "%.1f".format(station.avgRating) + "  ·  ${station.reviewCount} review" +
+                                if (station.reviewCount == 1) "" else "s"
+                        } else "No reviews yet",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = EvColors.OnSurfaceVar
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
                 val level = station.fuelLevel
@@ -315,6 +361,75 @@ private fun StationDetailContent(
             }
         }
 
+        // ── Ratings & reviews ─────────────────────────────────────────────
+        item {
+            Spacer(Modifier.height(20.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Ratings & Reviews", style = MaterialTheme.typography.titleMedium, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = onWriteReview) { Text("Write a review", color = EvColors.Primary) }
+            }
+        }
+
+        if (reviews.isEmpty()) {
+            item {
+                Text(
+                    "No reviews yet — leave one after your visit.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = EvColors.OnSurfaceVar,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
+
+        items(reviews, key = { it.id }) { review ->
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(EvColors.Surface)
+                        .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(16.dp))
+                        .padding(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(32.dp).clip(CircleShape).background(EvColors.PrimaryDim),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                (review.userName?.trim()?.firstOrNull()?.uppercase() ?: "E"),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = EvColors.Primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                review.userName ?: "EV user",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = EvColors.OnBackground,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            StarRow(review.rating)
+                        }
+                        review.createdAt?.let {
+                            Text(it.take(10), style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
+                        }
+                    }
+                    review.comment?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurface)
+                    }
+                }
+            }
+        }
+
         // ── Map placeholder ───────────────────────────────────────────────
         item {
             Spacer(Modifier.height(12.dp))
@@ -359,4 +474,85 @@ private fun StationDetailContent(
             }
         }
     }
+}
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+@Composable
+private fun StarRow(rating: Int, starSize: Int = 13) {
+    Row {
+        repeat(5) { idx ->
+            Icon(
+                if (idx < rating) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                null,
+                tint = if (idx < rating) EvColors.Warning else EvColors.OnSurfaceVar.copy(0.4f),
+                modifier = Modifier.size(starSize.dp)
+            )
+        }
+    }
+}
+
+/** Create/update the user's review. Backend rejects users without a completed booking (403). */
+@Composable
+private fun ReviewDialog(stationId: String, onDismiss: () -> Unit, onSubmitted: () -> Unit) {
+    var rating by remember { mutableStateOf(0) }
+    var comment by remember { mutableStateOf("") }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        containerColor = EvColors.Surface,
+        title = { Text("Rate this station", fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text("Your rating *", style = MaterialTheme.typography.labelMedium, color = EvColors.OnSurfaceVar)
+                Spacer(Modifier.height(6.dp))
+                Row {
+                    repeat(5) { idx ->
+                        val star = idx + 1
+                        IconButton(onClick = { rating = star }, modifier = Modifier.size(42.dp)) {
+                            Icon(
+                                if (star <= rating) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                null,
+                                tint = if (star <= rating) EvColors.Warning else EvColors.OnSurfaceVar,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                EvTextField(comment, { comment = it }, "Share your experience (optional)")
+                error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, color = EvColors.Error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            EvPrimaryButton(
+                text = if (saving) "Saving…" else "Submit",
+                onClick = {
+                    if (rating == 0) {
+                        error = "Pick a star rating first"
+                    } else {
+                        error = null
+                        saving = true
+                        scope.launch {
+                            StationRepository().postReview(stationId, rating, comment).fold(
+                                onSuccess = { saving = false; onSubmitted() },
+                                onFailure = { e -> saving = false; error = e.message }
+                            )
+                        }
+                    }
+                },
+                enabled = !saving
+            )
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !saving) {
+                Text("Cancel", color = EvColors.OnSurfaceVar)
+            }
+        }
+    )
 }

@@ -16,10 +16,13 @@ class BookingRepository {
 
     suspend fun addVehicle(
         vehicleType: String, registrationNo: String,
-        manufacturer: String?, model: String?, connectorType: String?
+        manufacturer: String?, model: String?, connectorType: String?,
+        batteryKwh: Double? = null
     ): Result<VehicleDto> = handle {
-        api.addVehicle(AddVehicleRequest(manufacturer, model, vehicleType, connectorType, null, registrationNo))
+        api.addVehicle(AddVehicleRequest(manufacturer, model, vehicleType, connectorType, batteryKwh, registrationNo))
     }
+
+    suspend fun service(serviceId: String): Result<ServiceDto> = handle { api.getService(serviceId) }
 
     suspend fun slots(serviceId: String, date: String): Result<List<SlotDto>> =
         handle { api.getSlots(serviceId, date) }

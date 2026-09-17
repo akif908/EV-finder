@@ -1,5 +1,7 @@
 package com.example.evfinder.feature.station
 
+import com.example.evfinder.core.model.ReviewDto
+import com.example.evfinder.core.model.ReviewRequest
 import com.example.evfinder.core.model.StationDto
 import com.example.evfinder.core.network.ApiClient
 import com.example.evfinder.core.network.ApiService
@@ -19,6 +21,13 @@ class StationRepository {
 
     suspend fun getStation(id: String): Result<StationDto> =
         handle { api.getStation(id) }
+
+    suspend fun getReviews(stationId: String): Result<List<ReviewDto>> =
+        handle { api.getReviews(stationId) }
+
+    /** Backend requires a COMPLETED booking at the station; 403 message surfaces otherwise. */
+    suspend fun postReview(stationId: String, rating: Int, comment: String?): Result<ReviewDto> =
+        handle { api.postReview(stationId, ReviewRequest(rating, comment?.trim()?.takeIf { it.isNotBlank() })) }
 
     private suspend fun <T> handle(call: suspend () -> Response<T>): Result<T> {
         return try {

@@ -12,6 +12,8 @@ data class StationDto(
     val closingTime: String?,
     val status: String,
     val fuelLevel: Int = 100,     // remaining energy reserve, 0–100 (%); backend always sends it
+    val avgRating: Double? = null, // average of station_reviews (null = no reviews yet)
+    val reviewCount: Int = 0,
     val services: List<ServiceDto> = emptyList()
 )
 
