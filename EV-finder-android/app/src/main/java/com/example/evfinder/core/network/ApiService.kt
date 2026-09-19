@@ -45,6 +45,50 @@ interface ApiService {
     @GET("api/services/{id}")
     suspend fun getService(@Path("id") id: String): Response<ServiceDto>
 
+    // ---- Fuel stations (separate module — read-only for users) ----
+    @GET("api/fuel-stations")
+    suspend fun getFuelStations(
+        @Query("q") query: String? = null,
+        @Query("fuel") fuel: String? = null,
+        @Query("availableOnly") availableOnly: Boolean = false
+    ): Response<List<FuelStationDto>>
+
+    @GET("api/fuel-stations/nearby")
+    suspend fun getNearbyFuelStations(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("radiusKm") radiusKm: Double = 10.0
+    ): Response<List<FuelStationDto>>
+
+    @GET("api/fuel-stations/{id}")
+    suspend fun getFuelStation(@Path("id") id: String): Response<FuelStationDto>
+
+    // ---- Operator: fuel station management (no booking endpoints exist) ----
+    @GET("api/operator/fuel-stations/my")
+    suspend fun operatorMyFuelStations(): Response<List<FuelStationDto>>
+
+    @POST("api/operator/fuel-stations")
+    suspend fun operatorCreateFuelStation(@Body body: FuelStationRequest): Response<FuelStationDto>
+
+    @PUT("api/operator/fuel-stations/{id}")
+    suspend fun operatorUpdateFuelStation(@Path("id") id: String, @Body body: FuelStationRequest): Response<FuelStationDto>
+
+    @DELETE("api/operator/fuel-stations/{id}")
+    suspend fun operatorDeleteFuelStation(@Path("id") id: String): Response<Unit>
+
+    @PUT("api/operator/fuel-stations/{id}/open")
+    suspend fun operatorSetFuelStationOpen(@Path("id") id: String, @Query("isOpen") isOpen: Boolean): Response<FuelStationDto>
+
+    @PUT("api/operator/fuel-stations/{id}/fuel/{fuelType}")
+    suspend fun operatorUpdateFuelInventory(
+        @Path("id") id: String,
+        @Path("fuelType") fuelType: String,
+        @Body body: FuelInventoryUpdateRequest
+    ): Response<FuelStationDto>
+
+    @DELETE("api/operator/fuel-stations/{id}/fuel/{fuelType}")
+    suspend fun operatorRemoveFuelType(@Path("id") id: String, @Path("fuelType") fuelType: String): Response<Unit>
+
     // ---- Vehicles ----
     @GET("api/vehicles/my")
     suspend fun getMyVehicles(): Response<List<VehicleDto>>

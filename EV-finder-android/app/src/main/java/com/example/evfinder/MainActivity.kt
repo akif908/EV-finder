@@ -34,6 +34,7 @@ import com.example.evfinder.feature.auth.RegisterScreen
 import com.example.evfinder.feature.booking.BookingsScreen
 import com.example.evfinder.feature.booking.BookingScreen
 import com.example.evfinder.feature.booking.PaymentScreen
+import com.example.evfinder.feature.fuel.FuelStationDetailScreen
 import com.example.evfinder.feature.home.HomeScreen
 import com.example.evfinder.feature.map.MapScreen
 import com.example.evfinder.feature.operator.OperatorApp
@@ -85,7 +86,9 @@ private val bottomRoutes = userBottomDestinations.map { it.route }.toSet()
 
 // Screens reached from the Stations tab. The bottom bar stays visible here so the
 // user can jump to any tab in the middle of the booking flow.
-private val stationFlowRoutes = setOf("station/{stationId}", "book/{serviceId}", "payment/{bookingId}")
+// Fuel station details are also in this group (read-only screen, no booking flow).
+private val stationFlowRoutes =
+    setOf("station/{stationId}", "book/{serviceId}", "payment/{bookingId}", "fuelStation/{fuelStationId}")
 
 @Composable
 fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
@@ -158,6 +161,9 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
             composable("home") {
                 HomeScreen(
                     onStationClick = { stationId -> navController.navigate("station/$stationId") },
+                    onFuelStationClick = { fuelStationId ->
+                        navController.navigate("fuelStation/$fuelStationId")
+                    },
                     onOpenMap = { navController.navigate("map") },
                     onSessionExpired = {
                         tokenStore.clear()
@@ -214,6 +220,27 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                     onBookService = { _, serviceId -> navController.navigate("book/$serviceId") },
                     onGetDirections = { lat, lng, name ->
                         // Google Maps turn-by-turn if installed, else any geo app
+                        val gmm = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=$lat,$lng"))
+                            .setPackage("com.google.android.apps.maps")
+                        try {
+                            context.startActivity(gmm)
+                        } catch (e: Exception) {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lng?q=$lat,$lng($name)"))
+                            )
+                        }
+                    }
+                )
+            }
+
+            // ---- Fuel station details (read-only, separate module, no booking) ----
+            composable("fuelStation/{fuelStationId}") { entry ->
+                val fuelStationId = entry.arguments?.getString("fuelStationId") ?: return@composable
+                val context = LocalContext.current
+                FuelStationDetailScreen(
+                    fuelStationId = fuelStationId,
+                    onBack = { navController.popBackStack() },
+                    onGetDirections = { lat, lng, name ->
                         val gmm = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=$lat,$lng"))
                             .setPackage("com.google.android.apps.maps")
                         try {

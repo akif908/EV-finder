@@ -249,8 +249,9 @@ private fun ActionChip(label: String, icon: androidx.compose.ui.graphics.vector.
 }
 
 // ─── Uber-style location picker: tap the map, confirm the point ──────────────
+// Shared with the fuel station module (feature.fuel).
 @Composable
-private fun LocationPickerOverlay(
+fun LocationPickerOverlay(
     onConfirm: (lat: Double, lng: Double) -> Unit,
     onCancel: () -> Unit
 ) {

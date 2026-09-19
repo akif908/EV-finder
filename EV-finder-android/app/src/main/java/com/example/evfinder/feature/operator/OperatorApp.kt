@@ -41,6 +41,7 @@ private data class OperatorDestination(
 private val operatorDestinations = listOf(
     OperatorDestination("op_dashboard", "Dashboard", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
     OperatorDestination("op_stations", "Stations", Icons.Filled.EvStation, Icons.Outlined.EvStation),
+    OperatorDestination("op_fuel", "Fuel", Icons.Filled.LocalGasStation, Icons.Outlined.LocalGasStation),
     OperatorDestination("op_bookings", "Bookings", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
     OperatorDestination("profile", "Profile", Icons.Filled.Person, Icons.Outlined.Person)
 )
@@ -107,6 +108,7 @@ fun OperatorApp(onSessionExpired: () -> Unit) {
         ) {
             composable("op_dashboard") { OperatorDashboardScreen(onSessionExpired) }
             composable("op_stations") { OperatorStationsScreen(onSessionExpired) }
+            composable("op_fuel") { com.example.evfinder.feature.fuel.OperatorFuelStationsScreen(onSessionExpired) }
             composable("op_bookings") { OperatorBookingsScreen(onSessionExpired) }
             composable("profile") { ProfileScreen(onLogout = onSessionExpired) }
         }

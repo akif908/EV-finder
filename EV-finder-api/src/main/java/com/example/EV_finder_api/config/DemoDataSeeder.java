@@ -1,6 +1,7 @@
 package com.example.EV_finder_api.config;
 
 import com.example.EV_finder_api.entity.*;
+import com.example.EV_finder_api.repository.FuelStationRepository;
 import com.example.EV_finder_api.repository.StationRepository;
 import com.example.EV_finder_api.repository.StationReviewRepository;
 import com.example.EV_finder_api.repository.UserRepository;
@@ -26,13 +27,16 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final StationRepository stationRepository;
     private final StationReviewRepository reviewRepository;
+    private final FuelStationRepository fuelStationRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(UserRepository userRepository, StationRepository stationRepository,
-                          StationReviewRepository reviewRepository, PasswordEncoder passwordEncoder) {
+                          StationReviewRepository reviewRepository,
+                          FuelStationRepository fuelStationRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.stationRepository = stationRepository;
         this.reviewRepository = reviewRepository;
+        this.fuelStationRepository = fuelStationRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -79,6 +83,65 @@ public class DemoDataSeeder implements CommandLineRunner {
                 + (stationRepository.count() - before) + " demo station(s) added, " + stationRepository.count() + " total");
 
         seedReviews();
+        seedFuelStations(operator);
+    }
+
+    /** Separate fuel-station module: LPG/Diesel/Octane/Petrol with queue, stock (liters), BDT price. */
+    private void seedFuelStations(User operator) {
+        java.util.Set<String> existingFuelNames = fuelStationRepository.findAll().stream()
+                .map(FuelStation::getName).collect(java.util.stream.Collectors.toSet());
+
+        seedFuelStation(existingFuelNames, operator, "Padma Filling Station", "Full-line filling station",
+                "Mirpur 10, Dhaka", 23.8103, 90.3654, true,
+                new String[][]{
+                        {"LPG", "4", "850", "70"},
+                        {"DIESEL", "7", "1250", "105"},
+                        {"OCTANE", "3", "720", "125"},
+                        {"PETROL", "5", "950", "121"}});
+
+        seedFuelStation(existingFuelNames, operator, "Banani Service & Fuel", "Fuel and service centre",
+                "Road 11, Banani, Dhaka", 23.7939, 90.4063, true,
+                new String[][]{
+                        {"DIESEL", "2", "600", "105"},
+                        {"OCTANE", "2", "300", "125"},
+                        {"PETROL", "1", "800", "121"}});
+
+        seedFuelStation(existingFuelNames, operator, "Uttara Auto Fuel Point", "Quick top-up point",
+                "Sector 7, Uttara, Dhaka", 23.8763, 90.3799, true,
+                new String[][]{
+                        {"LPG", "1", "400", "70"},
+                        {"OCTANE", "6", "150", "125"},
+                        {"PETROL", "3", "0", "121"}});
+
+        seedFuelStation(existingFuelNames, operator, "Jatrabari Fuel Depot", "Depot - currently closed",
+                "Jatrabari, Dhaka", 23.7233, 90.4195, false,
+                new String[][]{
+                        {"DIESEL", "0", "2000", "104"},
+                        {"PETROL", "0", "1500", "120"}});
+    }
+
+    private void seedFuelStation(java.util.Set<String> existingNames, User operator, String name, String desc,
+                                 String address, double lat, double lng, boolean isOpen, String[][] fuels) {
+        if (existingNames.contains(name)) return;
+        existingNames.add(name);
+
+        FuelStation station = FuelStation.builder()
+                .operator(operator)
+                .name(name).description(desc).address(address)
+                .latitude(BigDecimal.valueOf(lat)).longitude(BigDecimal.valueOf(lng))
+                .isOpen(isOpen)
+                .build();
+
+        for (String[] f : fuels) {
+            station.getInventories().add(FuelStationInventory.builder()
+                    .station(station)
+                    .fuelType(FuelType.valueOf(f[0]))
+                    .queueCount(Integer.parseInt(f[1]))
+                    .remainingLiters(new BigDecimal(f[2]))
+                    .pricePerLiter(new BigDecimal(f[3]))
+                    .build());
+        }
+        fuelStationRepository.save(station);
     }
 
     /** Demo reviewer accounts + one review per reviewer per demo station (skipped if already present). */

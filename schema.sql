@@ -109,6 +109,42 @@ CREATE TABLE station_reviews (
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
+-- FUEL STATIONS  (separate module — NOT related to EV stations,
+-- no booking concept; users only see queue/stock/price info)
+-- ------------------------------------------------------------
+CREATE TABLE fuel_stations (
+  fuel_station_id VARCHAR(36)  NOT NULL,
+  operator_id     VARCHAR(36)  NOT NULL,
+  name            VARCHAR(120) NOT NULL,
+  description     VARCHAR(500) NULL,
+  address         VARCHAR(255) NULL,
+  latitude        DECIMAL(10,7) NOT NULL,
+  longitude       DECIMAL(11,7) NOT NULL,
+  is_open         BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (fuel_station_id),
+  KEY idx_fuel_stations_operator (operator_id),
+  CONSTRAINT fk_fuel_stations_operator FOREIGN KEY (operator_id)
+    REFERENCES users(user_id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Per fuel type: queue length, remaining stock (liters), price (BDT/liter)
+CREATE TABLE fuel_station_inventories (
+  inventory_id     VARCHAR(36) NOT NULL,
+  fuel_station_id  VARCHAR(36) NOT NULL,
+  fuel_type        ENUM('LPG','DIESEL','OCTANE','PETROL') NOT NULL,
+  queue_count      INT NOT NULL DEFAULT 0,     -- vehicles waiting; never negative
+  remaining_liters DECIMAL(10,2) NOT NULL,     -- liters; 0 = Out of Stock
+  price_per_liter  DECIMAL(8,2) NOT NULL,      -- BDT per liter; never negative
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (inventory_id),
+  UNIQUE KEY uq_fuel_station_type (fuel_station_id, fuel_type),
+  CONSTRAINT fk_fuel_inventories_station FOREIGN KEY (fuel_station_id)
+    REFERENCES fuel_stations(fuel_station_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
 -- BOOKINGS
 -- Index supports the overlap-conflict query used to prevent
 -- double booking: WHERE service_id = ? AND status IN
