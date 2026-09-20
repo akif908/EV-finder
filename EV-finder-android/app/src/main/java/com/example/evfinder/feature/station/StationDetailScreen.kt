@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,9 +20,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.evfinder.core.model.StationDto
+import com.example.evfinder.core.model.StationReviewsDto
 import com.example.evfinder.ui.components.*
 import com.example.evfinder.ui.theme.EvColors
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 
 /**
  * Premium Station details + services – redesigned.
@@ -34,6 +41,7 @@ fun StationDetailScreen(
     onGetDirections: (latitude: Double, longitude: Double, name: String) -> Unit
 ) {
     var station by remember { mutableStateOf<StationDto?>(null) }
+    var reviews by remember { mutableStateOf<StationReviewsDto?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
 
@@ -41,6 +49,11 @@ fun StationDetailScreen(
         StationRepository().getStation(stationId).fold(
             onSuccess = { station = it },
             onFailure = { error = it.message }
+        )
+        // Reviews are supplementary — a failure here must not blank the screen.
+        StationRepository().stationReviews(stationId).fold(
+            onSuccess = { reviews = it },
+            onFailure = { }
         )
         loading = false
     }
@@ -78,7 +91,7 @@ fun StationDetailScreen(
             }
         }
 
-        station != null -> StationDetailContent(station!!, onBack, onBookService, onGetDirections)
+        station != null -> StationDetailContent(station!!, reviews, onBack, onBookService, onGetDirections)
     }
 }
 
@@ -122,6 +135,7 @@ private fun FlowBackButton(onBack: () -> Unit) {
 @Composable
 private fun StationDetailContent(
     station: StationDto,
+    reviews: StationReviewsDto?,
     onBack: () -> Unit,
     onBookService: (String, String) -> Unit,
     onGetDirections: (latitude: Double, longitude: Double, name: String) -> Unit
@@ -158,16 +172,35 @@ private fun StationDetailContent(
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(station.name, style = MaterialTheme.typography.titleLarge, color = EvColors.OnBackground, fontWeight = FontWeight.Bold)
-                        Text("Bay 04", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+                        val r = reviews
+                        if (r != null && r.count > 0) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("★", color = EvColors.Primary, style = MaterialTheme.typography.labelMedium)
+                                Text(
+                                    r.averageRating.toBigDecimal().stripTrailingZeros().toPlainString(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold
+                                )
+                                Text("(${r.count})", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+                            }
+                        } else {
+                            Text(
+                                "${station.services.count { it.availableSlots > 0 }} of ${station.services.size} services open",
+                                style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar
+                            )
+                        }
                     }
-                    StatusPill("Reserved", isActive = false)
+                    StatusPill(
+                        if (station.status == "ACTIVE") "Active" else station.status.replace('_', ' ').lowercase(),
+                        isActive = station.status == "ACTIVE"
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(Icons.Filled.CalendarMonth, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(14.dp))
                     val open = station.openingTime?.take(5) ?: "--"
                     val close = station.closingTime?.take(5) ?: "--"
-                    Text("Today • $open – $close (45 min)", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+                    Text("Today • $open – $close", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
                 }
                 station.address?.let {
                     Spacer(Modifier.height(4.dp))
@@ -285,6 +318,118 @@ private fun StationDetailContent(
             }
         }
 
+        // ── Reviews ───────────────────────────────────────────────────────
+        item {
+            Spacer(Modifier.height(20.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(Icons.Filled.Star, null, tint = EvColors.Secondary, modifier = Modifier.size(16.dp))
+                Text("Reviews", style = MaterialTheme.typography.titleMedium, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+
+        val r = reviews
+        if (r == null || r.count == 0) {
+            item {
+                Box(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(EvColors.Surface)
+                        .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(14.dp))
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        "No reviews yet — book a session and be the first to rate this station.",
+                        color = EvColors.OnSurfaceVar,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        } else {
+            item {
+                // rating summary tile
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(EvColors.Surface)
+                        .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(14.dp))
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            r.averageRating.toBigDecimal().stripTrailingZeros().toPlainString(),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = EvColors.Primary, fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "★".repeat(r.averageRating.toInt().coerceIn(0, 5)),
+                            color = EvColors.Primary,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Box(Modifier.width(1.dp).height(36.dp).background(EvColors.SurfaceHighest))
+                    Spacer(Modifier.width(16.dp))
+                    Text(
+                        "${r.count} review${if (r.count == 1) "" else "s"} from verified sessions",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = EvColors.OnSurfaceVar
+                    )
+                }
+            }
+            items(r.reviews, key = { it.id }) { review ->
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(EvColors.SurfaceLow)
+                        .border(1.dp, EvColors.SurfaceBorder.copy(0.6f), RoundedCornerShape(14.dp))
+                        .padding(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(30.dp).clip(CircleShape).background(EvColors.SurfaceHighest),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                review.userName.take(1).uppercase(),
+                                color = EvColors.Primary,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                review.userName,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = EvColors.OnSurface, fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                review.createdAt?.take(10) ?: "",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = EvColors.OnSurfaceVar
+                            )
+                        }
+                        Text(
+                            "★".repeat(review.rating.coerceIn(0, 5)) +
+                                "☆".repeat((5 - review.rating).coerceIn(0, 5)),
+                            color = EvColors.Primary,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                    review.comment?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurface)
+                    }
+                }
+            }
+        }
+
         // ── Map placeholder ───────────────────────────────────────────────
         item {
             Spacer(Modifier.height(12.dp))
@@ -296,11 +441,35 @@ private fun StationDetailContent(
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFF1C2B1A))
                 ) {
-                    Box(Modifier.fillMaxSize().background(
-                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(Color(0xFF0E1F0D), Color(0xFF1A2E19))
-                        )
-                    ))
+                    // Live OpenStreetMap preview of the exact station position
+                    AndroidView(
+                        factory = { ctx ->
+                            MapView(ctx).apply {
+                                setTileSource(TileSourceFactory.MAPNIK)
+                                setMultiTouchControls(false)
+                                zoomController.setVisibility(
+                                    org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER
+                                )
+                                isTilesScaledToDpi = true
+                                controller.setZoom(15.0)
+                                controller.setCenter(GeoPoint(station.latitude, station.longitude))
+                            }
+                        },
+                        update = { map ->
+                            if (map.tag != station.id) {
+                                map.tag = station.id
+                                map.overlays.clear()
+                                map.overlays.add(Marker(map).apply {
+                                    position = GeoPoint(station.latitude, station.longitude)
+                                    title = station.name
+                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                })
+                                map.controller.setCenter(GeoPoint(station.latitude, station.longitude))
+                                map.invalidate()
+                            }
+                        },
+                        modifier = Modifier.matchParentSize()
+                    )
                     Row(
                         Modifier
                             .align(Alignment.BottomStart)

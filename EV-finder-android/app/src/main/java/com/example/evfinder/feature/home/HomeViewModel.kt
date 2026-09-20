@@ -28,6 +28,8 @@ data class HomeUiState(
     val liveTick: Int = 0,
     // real-world fuel / LPG POIs (OpenStreetMap) for the map preview
     val pois: List<OverpassClient.Poi> = emptyList(),
+    /** True while the live Overpass query is still in flight. */
+    val poisLoading: Boolean = true,
     /** Search filters/sorting: See [HomeViewModel.SORTS]. */
     val sortMode: String = "RATING",
     val onlyAvailable: Boolean = false,
@@ -43,6 +45,12 @@ class HomeViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
 
     companion object {
+        // Greater Dhaka bounding box used for the fuel / LPG search.
+        const val BOX_SOUTH = 23.68
+        const val BOX_WEST = 90.32
+        const val BOX_NORTH = 23.90
+        const val BOX_EAST = 90.48
+
         val SORTS = listOf(
             "RATING" to "Top rated",
             "REVIEWS" to "Most reviewed",
@@ -130,9 +138,18 @@ class HomeViewModel : ViewModel() {
 
     /** Fuel/LPG stations around Dhaka for the map preview layer. */
     private fun loadPois() {
+        // Paint the curated Dhaka pumps straight away. The public Overpass
+        // mirrors regularly take >10 s or time out entirely, and an empty
+        // fuel/LPG layer makes the Home chips look broken.
+        val seed = OverpassClient.seedPois(BOX_SOUTH, BOX_WEST, BOX_NORTH, BOX_EAST)
+        _uiState.value = _uiState.value.copy(pois = seed)
+
         viewModelScope.launch {
-            val pois = OverpassClient.fuelAndLpg(23.68, 90.32, 23.90, 90.48)
-            _uiState.value = _uiState.value.copy(pois = pois)
+            val live = OverpassClient.fuelAndLpg(BOX_SOUTH, BOX_WEST, BOX_NORTH, BOX_EAST)
+            _uiState.value = _uiState.value.copy(
+                pois = live.ifEmpty { seed },
+                poisLoading = false
+            )
         }
     }
 

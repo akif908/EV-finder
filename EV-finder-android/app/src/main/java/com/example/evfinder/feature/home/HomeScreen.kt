@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.evfinder.core.model.BookingDto
 import com.example.evfinder.core.model.ServiceDto
 import com.example.evfinder.core.model.StationDto
+import com.example.evfinder.core.network.OverpassClient
 import com.example.evfinder.ui.components.*
 import com.example.evfinder.ui.theme.EvColors
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -45,10 +46,14 @@ import org.osmdroid.views.overlay.Marker
 fun HomeScreen(
     onStationClick: (String) -> Unit,
     onOpenMap: () -> Unit,
+    onOpenNotifications: () -> Unit,
     onSessionExpired: () -> Unit,
+    onGetDirections: (lat: Double, lng: Double, name: String) -> Unit = { _, _, _ -> },
     viewModel: HomeViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    // Pump opened from the Fuel & LPG list — shows the full detail card.
+    var selectedPoi by remember { mutableStateOf<OverpassClient.Poi?>(null) }
 
     // Re-fetch silently every time the user lands on this tab, so the station
     // list and the upcoming-booking banner always reflect the latest state.
@@ -99,6 +104,19 @@ fun HomeScreen(
                     Icon(Icons.Outlined.Map, null, tint = EvColors.OnSurface, modifier = Modifier.size(18.dp))
                 }
                 Spacer(Modifier.width(8.dp))
+                // Notifications bell (badge count comes from the notifications tab)
+                Box(
+                    Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(EvColors.SurfaceHigh)
+                        .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(10.dp))
+                        .clickable(onClick = onOpenNotifications),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Outlined.Notifications, null, tint = EvColors.OnSurface, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(8.dp))
                 // Live badge
                 Row(
                     Modifier
@@ -136,7 +154,7 @@ fun HomeScreen(
                 BasicSearchField(
                     value = state.query,
                     onValueChange = viewModel::onQueryChanged,
-                    placeholder = "Austin, TX",
+                    placeholder = "Search station, area or city",
                     modifier = Modifier.weight(1f)
                 )
                 Icon(Icons.Outlined.MyLocation, null, tint = EvColors.Primary, modifier = Modifier.size(20.dp))
@@ -150,6 +168,27 @@ fun HomeScreen(
                 pois = state.pois,
                 onOpenMap = onOpenMap
             )
+        }
+
+        // ── Sort + availability chips ─────────────────────────────────────
+        // Highest-rated stations come first by default, so the ranking surfaced
+        // by the backend is visible to the user and can be re-sorted.
+        item {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    EvFilterChip(
+                        "Available now",
+                        state.onlyAvailable,
+                        { viewModel.toggleOnlyAvailable() }
+                    )
+                }
+                items(HomeViewModel.SORTS) { (mode, label) ->
+                    EvFilterChip(label, state.sortMode == mode, { viewModel.setSort(mode) })
+                }
+            }
         }
 
         // ── Upcoming booking preview (if any) ────────────────────────────
@@ -176,6 +215,14 @@ fun HomeScreen(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
+                if (!state.loading && state.visibleStations.isNotEmpty()) {
+                    Text(
+                        "${state.visibleStations.size} found",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = EvColors.OnSurfaceVar
+                    )
+                    Spacer(Modifier.width(10.dp))
+                }
                 if (state.loading) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = EvColors.Primary)
             }
         }
@@ -203,14 +250,17 @@ fun HomeScreen(
                 }
             }
 
-            state.stations.isEmpty() && !state.loading -> item {
+            state.visibleStations.isEmpty() && !state.loading -> item {
                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Filled.SearchOff, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(40.dp))
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            if (state.query.isBlank()) "No active stations yet"
-                            else "No stations match \"${state.query}\"",
+                            when {
+                                state.query.isNotBlank() -> "No stations match \"${state.query}\""
+                                state.onlyAvailable -> "No stations with free slots right now"
+                                else -> "No active stations yet"
+                            },
                             color = EvColors.OnSurfaceVar
                         )
                     }
@@ -218,8 +268,8 @@ fun HomeScreen(
             }
 
             else -> {
-                // Featured top station (full card)
-                val featured = state.stations.firstOrNull()
+                // Featured top station (full card) — first after rating ranking
+                val featured = state.visibleStations.firstOrNull()
                 if (featured != null) {
                     item {
                         FeaturedStationCard(
@@ -230,8 +280,8 @@ fun HomeScreen(
                     }
                 }
                 // Remaining as compact list rows
-                if (state.stations.size > 1) {
-                    items(state.stations.drop(1), key = { it.id }) { station ->
+                if (state.visibleStations.size > 1) {
+                    items(state.visibleStations.drop(1), key = { it.id }) { station ->
                         CompactStationRow(
                             station = station,
                             onClick = { onStationClick(station.id) },
@@ -245,12 +295,278 @@ fun HomeScreen(
                 }
             }
         }
+
+        // ── Fuel & LPG nearby (free OpenStreetMap data) ───────────────────
+        // Real pumps from the OSM `amenity=fuel` tag, so the app is useful to
+        // petrol/LPG drivers too — info only, with turn-by-turn directions.
+        if (state.pois.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.LocalGasStation, null,
+                        tint = EvColors.Warning, modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Fuel & LPG nearby",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = EvColors.OnBackground,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (state.poisLoading) {
+                        CircularProgressIndicator(
+                            Modifier.size(14.dp), strokeWidth = 2.dp, color = EvColors.Primary
+                        )
+                    } else {
+                        Text(
+                            "${state.pois.size} found",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = EvColors.OnSurfaceVar
+                        )
+                    }
+                }
+            }
+
+            items(state.pois.take(6)) { poi ->
+                FuelPoiRow(
+                    poi = poi,
+                    onClick = { selectedPoi = poi },
+                    onGetDirections = { onGetDirections(poi.lat, poi.lng, poi.name) },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
+            if (state.pois.size > 6) {
+                item {
+                    TextButton(
+                        onClick = onOpenMap,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            "Show all ${state.pois.size} on the map",
+                            color = EvColors.Primary,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Pump detail card ──────────────────────────────────────────────────
+    selectedPoi?.let { poi ->
+        FuelPoiDetailCard(
+            poi = poi,
+            onClose = { selectedPoi = null },
+            onGetDirections = { onGetDirections(poi.lat, poi.lng, poi.name) },
+            onShowOnMap = onOpenMap
+        )
+    }
+}
+
+// ─── Fuel / LPG pump row ─────────────────────────────────────────────────────
+@Composable
+private fun FuelPoiRow(
+    poi: OverpassClient.Poi,
+    onClick: () -> Unit,
+    onGetDirections: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Amber for petrol, blue for LPG — same coding as the map legend.
+    val accent = if (poi.lpg) Color(0xFF4FC3F7) else Color(0xFFFFA726)
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(EvColors.Surface)
+            .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(accent.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.LocalGasStation, null,
+                tint = accent, modifier = Modifier.size(19.dp)
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                poi.name,
+                style = MaterialTheme.typography.titleSmall,
+                color = EvColors.OnBackground,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                poi.brand ?: if (poi.lpg) "LPG & Fuel station" else "Fuel station",
+                style = MaterialTheme.typography.bodySmall,
+                color = accent,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(3.dp))
+            if (poi.fuelTypes.isNotEmpty()) {
+                Text(
+                    poi.fuelTypes.joinToString(" · "),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = EvColors.OnSurface,
+                    maxLines = 1
+                )
+                Spacer(Modifier.height(2.dp))
+            }
+            Text(
+                listOfNotNull(poi.openingHours, "%.4f, %.4f".format(poi.lat, poi.lng))
+                    .joinToString("  •  "),
+                style = MaterialTheme.typography.labelSmall,
+                color = EvColors.OnSurfaceVar,
+                maxLines = 1
+            )
+        }
+        Box(
+            Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(EvColors.SurfaceHigh)
+                .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(11.dp))
+                .clickable(onClick = onGetDirections),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Navigation, null,
+                tint = EvColors.Primary, modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+// ─── Pump detail card (tap a fuel row) ──────────────────────────────────────
+@Composable
+private fun FuelPoiDetailCard(
+    poi: OverpassClient.Poi,
+    onClose: () -> Unit,
+    onGetDirections: () -> Unit,
+    onShowOnMap: () -> Unit
+) {
+    val accent = if (poi.lpg) Color(0xFF4FC3F7) else Color(0xFFFFA726)
+    AlertDialog(
+        onDismissRequest = onClose,
+        containerColor = EvColors.Surface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(accent.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.LocalGasStation, null,
+                        tint = accent, modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        poi.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = EvColors.OnBackground,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        if (poi.lpg) "LPG & Fuel station" else "Fuel station",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = accent
+                    )
+                }
+            }
+        },
+        text = {
+            Column {
+                poi.brand?.let { DetailLine(Icons.Filled.LocalOffer, "Brand", it) }
+                if (poi.fuelTypes.isNotEmpty()) {
+                    DetailLine(Icons.Filled.Bolt, "Fuels", poi.fuelTypes.joinToString(", "))
+                }
+                poi.openingHours?.let {
+                    DetailLine(Icons.Filled.Schedule, "Opening hours", it)
+                }
+                poi.address?.let { DetailLine(Icons.Filled.LocationOn, "Address", it) }
+                DetailLine(
+                    Icons.Filled.Place,
+                    "Coordinates",
+                    "%.5f, %.5f".format(poi.lat, poi.lng)
+                )
+
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Fuel and LPG pumps are listed for information only — booking and " +
+                        "payment in EV Finder cover EV charging and battery swap.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = EvColors.OnSurfaceVar
+                )
+            }
+        },
+        confirmButton = {
+            EvPrimaryButton(
+                "Get Directions",
+                onClick = { onGetDirections(); onClose() },
+                icon = Icons.Filled.Navigation
+            )
+        },
+        dismissButton = {
+            TextButton(onClick = { onShowOnMap(); onClose() }) {
+                Text("Show on map", color = EvColors.Primary)
+            }
+        }
+    )
+}
+
+@Composable
+private fun DetailLine(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(icon, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                label.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = EvColors.OnSurfaceVar,
+                letterSpacing = 0.6.sp
+            )
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = EvColors.OnSurface)
+        }
     }
 }
 
 // ─── Featured full station card ───────────────────────────────────────────────
 @Composable
 private fun FeaturedStationCard(station: StationDto, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val available = station.services.count { it.availableSlots > 0 }
+    val topService = station.services.maxByOrNull { it.powerKw ?: 0.0 }
+    val cheapest = station.services.minOfOrNull { it.pricePerUnit }
+
     EvCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -261,6 +577,8 @@ private fun FeaturedStationCard(station: StationDto, onClick: () -> Unit, modifi
                         fontWeight = FontWeight.Bold,
                         color = EvColors.OnBackground
                     )
+                    Spacer(Modifier.height(3.dp))
+                    RatingRow(station.averageRating, station.reviewCount)
                     station.address?.let {
                         Spacer(Modifier.height(3.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -274,11 +592,24 @@ private fun FeaturedStationCard(station: StationDto, onClick: () -> Unit, modifi
             }
             Spacer(Modifier.height(14.dp))
 
-            // Stat row
+            // Stat row — driven by the station's real services
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatPill(icon = Icons.Filled.Bolt, label = "350 kW", sublabel = "UltraFast")
-                StatPill(icon = Icons.Filled.Cable, label = "CCS ×4", sublabel = "NACS / CCS")
-                StatusPill(label = "2 of 4 Open")
+                topService?.let {
+                    StatPill(
+                        icon = Icons.Filled.Bolt,
+                        label = "${(it.powerKw ?: 0.0).toInt()} kW",
+                        sublabel = it.connectorType ?: it.serviceType
+                    )
+                }
+                StatPill(
+                    icon = Icons.Filled.Cable,
+                    label = "${station.services.size} service${if (station.services.size == 1) "" else "s"}",
+                    sublabel = station.services.firstOrNull()?.serviceType ?: "Charging"
+                )
+                StatusPill(
+                    label = "$available of ${station.services.size} Open",
+                    isActive = available > 0
+                )
             }
 
             Spacer(Modifier.height(12.dp))
@@ -287,17 +618,19 @@ private fun FeaturedStationCard(station: StationDto, onClick: () -> Unit, modifi
 
             // Amenities row
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                station.services.firstOrNull()?.let {
+                cheapest?.let {
                     Text(
-                        "৳${it.pricePerUnit.toBigDecimal().stripTrailingZeros().toPlainString()} / kWh",
+                        "from ৳${it.toBigDecimal().stripTrailingZeros().toPlainString()} / kWh",
                         style = MaterialTheme.typography.labelMedium,
                         color = EvColors.OnSurface
                     )
                 }
-                AmenityTag(Icons.Filled.LocalCafe, "Cafe")
-                AmenityTag(Icons.Filled.Wifi, "Free WiFi")
                 Spacer(Modifier.weight(1f))
-                Text("No idle fee", style = MaterialTheme.typography.labelSmall, color = EvColors.Primary)
+                Text(
+                    if (available > 0) "Slots free now" else "Fully booked",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (available > 0) EvColors.Primary else EvColors.OnSurfaceVar
+                )
             }
 
             Spacer(Modifier.height(14.dp))
@@ -349,7 +682,9 @@ private fun CompactStationRow(station: StationDto, onClick: () -> Unit, modifier
             Text(station.name, style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(2.dp))
             val kw = station.services.firstOrNull()?.powerKw?.toInt()?.toString() ?: "?"
-            Text("$kw kW  •  ${station.services.size} Available", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+            Text("$kw kW  •  ${station.services.count { it.availableSlots > 0 }} slots free", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+            Spacer(Modifier.height(2.dp))
+            RatingRow(station.averageRating, station.reviewCount)
         }
         Column(horizontalAlignment = Alignment.End) {
             LiveDot(station.status == "ACTIVE")
@@ -385,6 +720,27 @@ private fun UpcomingBannerCard(booking: BookingDto, modifier: Modifier = Modifie
     }
 }
 
+// ─── Star rating (highest-rated stations rank first in the list) ──────────────
+@Composable
+private fun RatingRow(rating: Double, count: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (count == 0) {
+            Text("Not rated yet", style = MaterialTheme.typography.labelSmall,
+                color = EvColors.OnSurfaceVar)
+        } else {
+            Text("★", color = EvColors.Primary, style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.width(4.dp))
+            Text(
+                rating.toBigDecimal().stripTrailingZeros().toPlainString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("($count)", style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
+        }
+    }
+}
+
 // ─── Stat pill ────────────────────────────────────────────────────────────────
 @Composable
 private fun StatPill(
@@ -399,15 +755,6 @@ private fun StatPill(
             Text(label, style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.Bold)
         }
         Text(sublabel, style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
-    }
-}
-
-// ─── Amenity tag ──────────────────────────────────────────────────────────────
-@Composable
-private fun AmenityTag(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        Icon(icon, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(12.dp))
-        Text(text, style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
     }
 }
 
@@ -450,9 +797,17 @@ private fun HomeFiltersAndPreview(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item { FilterChipPill("⚡ Available Now", Icons.Filled.Bolt, showEv) { showEv = !showEv } }
-        item { FilterChipPill("Fuel", Icons.Filled.LocalGasStation, showFuel) { showFuel = !showFuel } }
-        item { FilterChipPill("LPG", Icons.Filled.LocalGasStation, showLpg) { showLpg = !showLpg } }
+        item { FilterChipPill("EV stations", Icons.Filled.Bolt, showEv) { showEv = !showEv } }
+        item {
+            FilterChipPill(
+                "Fuel ${pois.count { !it.lpg }}", Icons.Filled.LocalGasStation, showFuel
+            ) { showFuel = !showFuel }
+        }
+        item {
+            FilterChipPill(
+                "LPG ${pois.count { it.lpg }}", Icons.Filled.LocalGasStation, showLpg
+            ) { showLpg = !showLpg }
+        }
     }
 
     HomeMapPreview(

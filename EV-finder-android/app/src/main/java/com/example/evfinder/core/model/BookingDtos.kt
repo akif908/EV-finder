@@ -38,7 +38,9 @@ data class BookingDto(
     val endTime: String,
     val status: String,          // PENDING | CONFIRMED | COMPLETED | CANCELLED
     val amount: Double?,
-    val createdAt: String?
+    val createdAt: String?,
+    /** True once this booking has been rated, so the CTA isn't offered twice. */
+    val reviewed: Boolean = false
 )
 
 data class PaymentRequestDto(

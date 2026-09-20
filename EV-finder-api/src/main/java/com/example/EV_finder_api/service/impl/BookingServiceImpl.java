@@ -26,6 +26,7 @@ public class BookingServiceImpl implements BookingService {
     private final CurrentUserProvider currentUserProvider;
     private final AvailabilityWebSocketHandler availabilitySocket;
     private final NotificationService notificationService;
+    private final ReviewRepository reviewRepository;
 
     public BookingServiceImpl(BookingRepository bookingRepository,
                               PaymentRepository paymentRepository,
@@ -33,7 +34,8 @@ public class BookingServiceImpl implements BookingService {
                               StationServiceRepository stationServiceRepository,
                               CurrentUserProvider currentUserProvider,
                               AvailabilityWebSocketHandler availabilitySocket,
-                              NotificationService notificationService) {
+                              NotificationService notificationService,
+                              ReviewRepository reviewRepository) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.vehicleRepository = vehicleRepository;
@@ -41,6 +43,7 @@ public class BookingServiceImpl implements BookingService {
         this.currentUserProvider = currentUserProvider;
         this.availabilitySocket = availabilitySocket;
         this.notificationService = notificationService;
+        this.reviewRepository = reviewRepository;
     }
 
     /**
@@ -96,7 +99,7 @@ public class BookingServiceImpl implements BookingService {
                 "New booking received",
                 user.getName() + " booked " + station.getName() + " for " + booking.getStartTime() + ".",
                 Notification.NotificationType.NEW_BOOKING);
-        return BookingResponse.from(booking, service.getPricePerUnit());
+        return withAmount(booking, service.getPricePerUnit());
     }
 
     @Override
@@ -134,7 +137,8 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public BookingResponse details(String bookingId) {
-        return BookingResponse.from(getOwnedBooking(bookingId), amountOf(getOwnedBooking(bookingId)));
+        Booking b = getOwnedBooking(bookingId);
+        return withAmount(b, amountOf(b));
     }
 
     @Override
@@ -159,7 +163,7 @@ public class BookingServiceImpl implements BookingService {
                 booking.getUser().getName() + " cancelled their booking at "
                         + booking.getStation().getName() + " — the slot is free again.",
                 Notification.NotificationType.BOOKING_CANCELLED);
-        return BookingResponse.from(booking, amountOf(booking));
+        return withAmount(booking, amountOf(booking));
     }
 
     Booking bookingForPayment(String bookingId, String userId) {
@@ -183,7 +187,12 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingResponse withAmount(Booking b) {
-        return BookingResponse.from(b, amountOf(b));
+        return withAmount(b, amountOf(b));
+    }
+
+    /** Adds the amount plus whether this booking already has a review. */
+    private BookingResponse withAmount(Booking b, java.math.BigDecimal amount) {
+        return BookingResponse.from(b, amount, reviewRepository.existsByBookingId(b.getId()));
     }
 
     private java.math.BigDecimal amountOf(Booking b) {

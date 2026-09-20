@@ -99,10 +99,23 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
-                                navController.navigate(dest.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                // Tab switching pops back to the tab root instead of
+                                // navigating with saveState/restoreState. Two things
+                                // went wrong with the idiomatic version here:
+                                //   1. it anchored on graph.startDestinationId, which
+                                //      is "login" whenever the app was launched
+                                //      signed out — sign-in pops login, so the anchor
+                                //      matched nothing and every tap duplicated the
+                                //      destination, rotting the back stack.
+                                //   2. restoreState could replay a previously saved
+                                //      stack, so tapping "Stations" restored the
+                                //      Bookings screen sitting on top of home.
+                                val poppedToRoot = navController.popBackStack("home", inclusive = false)
+                                if (!poppedToRoot) {
+                                    navController.navigate("home") { popUpTo(0) { inclusive = true } }
+                                }
+                                if (navController.currentDestination?.route != dest.route) {
+                                    navController.navigate(dest.route) { launchSingleTop = true }
                                 }
                             },
                             icon = { Icon(dest.icon, contentDescription = stringResource(dest.labelRes)) },
@@ -148,6 +161,7 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
 
             // ---- Main tabs ----
             composable("home") {
+                val context = LocalContext.current
                 HomeScreen(
                     onStationClick = { stationId -> navController.navigate("station/$stationId") },
                     onOpenMap = { navController.navigate("map") },
@@ -155,7 +169,8 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                     onSessionExpired = {
                         tokenStore.clear()
                         navController.navigate("login") { popUpTo(0) { inclusive = true } }
-                    }
+                    },
+                    onGetDirections = { lat, lng, name -> openDirections(context, lat, lng, name) }
                 )
             }
             composable("map") {
@@ -166,10 +181,14 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                 )
             }
             composable("bookings") {
-                BookingsScreen(onSessionExpired = {
-                    tokenStore.clear()
-                    navController.navigate("login") { popUpTo(0) { inclusive = true } }
-                })
+                BookingsScreen(
+                    onSessionExpired = {
+                        tokenStore.clear()
+                        navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                    },
+                    onStationClick = { stationId -> navController.navigate("station/$stationId") },
+                    onOpenNotifications = { navController.navigate("notifications") }
+                )
             }
             composable("vehicles") { VehiclesScreen() }
             composable("profile") {

@@ -203,7 +203,7 @@ private fun PoiInfoCard(
                     Text(poi.name, style = MaterialTheme.typography.titleMedium,
                         color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
                     Text(
-                        if (poi.lpg) "LPG & Fuel Station" else "Fuel Station",
+                        poi.brand ?: if (poi.lpg) "LPG & Fuel Station" else "Fuel Station",
                         style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar
                     )
                 }
@@ -211,7 +211,31 @@ private fun PoiInfoCard(
                     Text("✕", color = EvColors.OnSurfaceVar, style = MaterialTheme.typography.titleMedium)
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
+            if (poi.fuelTypes.isNotEmpty()) {
+                Text(
+                    poi.fuelTypes.joinToString(" · "),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = EvColors.OnSurface
+                )
+                Spacer(Modifier.height(4.dp))
+            }
+            poi.openingHours?.let {
+                Text(
+                    "Open $it",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = EvColors.Primary
+                )
+                Spacer(Modifier.height(4.dp))
+            }
+            poi.address?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = EvColors.OnSurfaceVar
+                )
+                Spacer(Modifier.height(4.dp))
+            }
             Text("%.5f, %.5f".format(poi.lat, poi.lng),
                 style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
             Spacer(Modifier.height(12.dp))

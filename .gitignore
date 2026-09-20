@@ -26,3 +26,6 @@ EV-finder-api/target/
 .idea/libraries
 .idea/caches
 .DS_Store
+
+# Local verification scratch (adb UI dumps / screenshots)
+.shots/

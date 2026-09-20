@@ -41,7 +41,14 @@ data class BookingsUiState(
     val bookings: List<BookingDto> = emptyList(),
     val filter: String = "ALL",
     val error: String? = null,
-    val cancellingId: String? = null
+    val cancellingId: String? = null,
+    // review dialog
+    val reviewBooking: BookingDto? = null,
+    val reviewRating: Int = 0,
+    val reviewComment: String = "",
+    val submittingReview: Boolean = false,
+    /** Bookings already rated during this session — hides the CTA after submit. */
+    val reviewedIds: Set<String> = emptySet()
 )
 
 class BookingsViewModel : ViewModel() {
@@ -80,6 +87,42 @@ class BookingsViewModel : ViewModel() {
 
     fun setFilter(filter: String) { _uiState.value = _uiState.value.copy(filter = filter) }
 
+    // ---- reviews (the rating drives the station ranking on Home) ----
+    fun openReview(booking: BookingDto) {
+        _uiState.value = _uiState.value.copy(
+            reviewBooking = booking, reviewRating = 0, reviewComment = "", error = null
+        )
+    }
+
+    fun closeReview() {
+        _uiState.value = _uiState.value.copy(reviewBooking = null, submittingReview = false)
+    }
+
+    fun setRating(rating: Int) { _uiState.value = _uiState.value.copy(reviewRating = rating) }
+
+    fun setComment(comment: String) { _uiState.value = _uiState.value.copy(reviewComment = comment) }
+
+    fun submitReview() {
+        val s = _uiState.value
+        val booking = s.reviewBooking ?: return
+        if (s.reviewRating !in 1..5) return
+        viewModelScope.launch {
+            _uiState.value = s.copy(submittingReview = true, error = null)
+            repository.submitReview(booking.id, s.reviewRating, s.reviewComment.ifBlank { null }).fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(
+                        reviewBooking = null,
+                        submittingReview = false,
+                        reviewedIds = _uiState.value.reviewedIds + booking.id
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(submittingReview = false, error = e.message)
+                }
+            )
+        }
+    }
+
     fun cancel(id: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(cancellingId = id)
@@ -97,7 +140,12 @@ class BookingsViewModel : ViewModel() {
 }
 
 @Composable
-fun BookingsScreen(onSessionExpired: () -> Unit, viewModel: BookingsViewModel = viewModel()) {
+fun BookingsScreen(
+    onSessionExpired: () -> Unit,
+    onStationClick: (String) -> Unit = {},
+    onOpenNotifications: () -> Unit = {},
+    viewModel: BookingsViewModel = viewModel()
+) {
     val state by viewModel.uiState.collectAsState()
 
     // Every time the user lands on this tab (e.g. right after a payment) the
@@ -151,7 +199,15 @@ fun BookingsScreen(onSessionExpired: () -> Unit, viewModel: BookingsViewModel = 
                     Text("EV FINDER", style = MaterialTheme.typography.labelSmall, color = EvColors.Primary, letterSpacing = 1.sp)
                     Text("Bookings", style = MaterialTheme.typography.titleMedium, color = EvColors.OnBackground, fontWeight = FontWeight.Bold)
                 }
-                Icon(Icons.Outlined.Notifications, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(24.dp))
+                Box(
+                    Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(onClick = onOpenNotifications),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Outlined.Notifications, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(22.dp))
+                }
                 Spacer(Modifier.width(12.dp))
                 Box(
                     Modifier.size(34.dp).clip(RoundedCornerShape(50)).background(EvColors.PrimaryDim),
@@ -257,6 +313,9 @@ fun BookingsScreen(onSessionExpired: () -> Unit, viewModel: BookingsViewModel = 
                         booking = booking,
                         cancelling = state.cancellingId == booking.id,
                         onCancel = { viewModel.cancel(booking.id) },
+                        onReview = { viewModel.openReview(booking) },
+                        alreadyReviewed = booking.id in state.reviewedIds,
+                        onOpenStation = { onStationClick(booking.stationId) },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                     )
                 }
@@ -300,6 +359,79 @@ fun BookingsScreen(onSessionExpired: () -> Unit, viewModel: BookingsViewModel = 
             }
         }
     }
+
+    // ---- review dialog ----
+    state.reviewBooking?.let { booking ->
+        AlertDialog(
+            onDismissRequest = viewModel::closeReview,
+            containerColor = EvColors.Surface,
+            title = {
+                Text(
+                    "Rate ${booking.stationName}",
+                    color = EvColors.OnBackground, fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        "How was your session? Highest-rated stations rank first on Home.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = EvColors.OnSurfaceVar
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        (1..5).forEach { star ->
+                            Text(
+                                if (star <= state.reviewRating) "★" else "☆",
+                                color = if (star <= state.reviewRating) EvColors.Primary
+                                        else EvColors.SurfaceHighest,
+                                style = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .clickable { viewModel.setRating(star) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = state.reviewComment,
+                        onValueChange = viewModel::setComment,
+                        placeholder = {
+                            Text("Optional comment", color = EvColors.OnSurfaceVar.copy(alpha = 0.5f))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = EvColors.Primary,
+                            unfocusedBorderColor = EvColors.OutlineVariant,
+                            focusedContainerColor = EvColors.InputBackground,
+                            unfocusedContainerColor = EvColors.InputBackground,
+                            cursorColor = EvColors.Primary,
+                            focusedTextColor = EvColors.OnSurface,
+                            unfocusedTextColor = EvColors.OnSurface
+                        )
+                    )
+                    state.error?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, color = EvColors.Error, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                EvPrimaryButton(
+                    text = if (state.submittingReview) "Submitting…" else "Submit review",
+                    onClick = viewModel::submitReview,
+                    enabled = state.reviewRating in 1..5 && !state.submittingReview
+                )
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::closeReview) {
+                    Text("Cancel", color = EvColors.OnSurfaceVar)
+                }
+            }
+        )
+    }
 }
 
 // ─── Premium booking card ─────────────────────────────────────────────────────
@@ -308,6 +440,9 @@ private fun BookingCard(
     booking: BookingDto,
     cancelling: Boolean,
     onCancel: () -> Unit,
+    onReview: () -> Unit,
+    alreadyReviewed: Boolean,
+    onOpenStation: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isActive = booking.status == "CONFIRMED" &&
@@ -316,6 +451,16 @@ private fun BookingCard(
     val isUpcoming = (booking.status == "PENDING" || booking.status == "CONFIRMED") &&
         runCatching { LocalDateTime.parse(booking.startTime).isAfter(LocalDateTime.now()) }.getOrDefault(false)
     val isConfirmed = booking.status == "CONFIRMED"
+
+    // A session can be rated once it is finished — or, because nothing flips a
+    // booking to COMPLETED automatically, once the booked slot has elapsed.
+    // `booking.reviewed` (from the backend) keeps the CTA off an already-rated
+    // booking, which would otherwise fail on submit.
+    val isFinished = runCatching {
+        LocalDateTime.parse(booking.endTime).isBefore(LocalDateTime.now())
+    }.getOrDefault(false)
+    val reviewable = !alreadyReviewed && !booking.reviewed && booking.status != "CANCELLED" &&
+        (booking.status == "COMPLETED" || (booking.status == "CONFIRMED" && isFinished))
 
     val cardBg = if (isActive) EvColors.Surface else EvColors.Surface
     val borderColor = when {
@@ -348,7 +493,7 @@ private fun BookingCard(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Plugged In", style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
                     Text("•", color = EvColors.SurfaceBorder)
-                    Text("Bay 04", style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurface)
+                    Text(booking.serviceName, style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurface)
                 }
             }
         }
@@ -422,8 +567,8 @@ private fun BookingCard(
                 if (isActive) {
                     InfoPair(
                         icon = Icons.Filled.Bolt,
-                        label = "MAX SPEED",
-                        value = "Ultra-Fast 35…",
+                        label = "SERVICE",
+                        value = booking.serviceName,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -434,8 +579,8 @@ private fun BookingCard(
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     EvPrimaryButton(
-                        text = if (isActive) "Get Directions" else "Get Directions",
-                        onClick = {},
+                        text = "Get Directions",
+                        onClick = onOpenStation,
                         modifier = Modifier.weight(1f),
                         icon = Icons.Filled.Navigation
                     )
@@ -456,6 +601,17 @@ private fun BookingCard(
                         }
                     }
                 }
+            }
+
+            // ── Rate the station (drives the Home ranking) ────────────────
+            if (reviewable) {
+                Spacer(Modifier.height(12.dp))
+                EvPrimaryButton(
+                    text = "Rate this station",
+                    onClick = onReview,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Filled.Star
+                )
             }
         }
     }

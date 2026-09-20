@@ -19,14 +19,20 @@ public record BookingResponse(
         LocalDateTime endTime,
         BookingStatus status,
         BigDecimal amount,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        /** True once this booking has been rated — the client hides the review CTA. */
+        boolean reviewed
 ) {
     public static BookingResponse from(Booking b, BigDecimal amount) {
+        return from(b, amount, false);
+    }
+
+    public static BookingResponse from(Booking b, BigDecimal amount, boolean reviewed) {
         return new BookingResponse(
                 b.getId(), b.getUser().getId(), b.getUser().getName(), b.getVehicle().getId(),
                 b.getStation().getId(), b.getStation().getName(),
                 b.getService().getId(), b.getService().getServiceType().name(),
                 b.getStartTime(), b.getEndTime(), b.getStatus(),
-                amount, b.getCreatedAt());
+                amount, b.getCreatedAt(), reviewed);
     }
 }

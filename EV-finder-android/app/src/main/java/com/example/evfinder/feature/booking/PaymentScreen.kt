@@ -30,6 +30,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.evfinder.core.model.BookingDto
+import com.example.evfinder.core.model.VehicleDto
 import com.example.evfinder.feature.auth.EvTextField
 import com.example.evfinder.ui.components.*
 import com.example.evfinder.ui.theme.EvColors
@@ -39,24 +41,62 @@ import kotlinx.coroutines.launch
 
 data class PaymentUiState(
     val processing: Boolean = false,
+    val loadingBooking: Boolean = true,
     val error: String? = null,
-    val result: PaymentResult? = null
+    val result: PaymentResult? = null,
+    val booking: BookingDto? = null,
+    val vehicle: VehicleDto? = null
 )
 
 data class PaymentResult(val success: Boolean, val message: String)
+
+/** Flat reservation fee (BDT) shown in the breakdown; the rest is energy cost. */
+private const val RESERVATION_FEE = 20.0
 
 class PaymentViewModel(private val bookingId: String) : ViewModel() {
     private val repository = BookingRepository()
     private val _uiState = MutableStateFlow(PaymentUiState())
     val uiState: StateFlow<PaymentUiState> = _uiState
 
-    fun pay(method: String, forceFailure: Boolean) {
+    init {
+        loadBooking()
+    }
+
+    /** Pulls the booking the user is paying for, plus the vehicle it was made with. */
+    private fun loadBooking() {
         viewModelScope.launch {
-            _uiState.value = PaymentUiState(processing = true)
-            repository.pay(bookingId, method, forceFailure).fold(
+            repository.booking(bookingId).fold(
+                onSuccess = { b ->
+                    val vehicle = repository.myVehicles().getOrNull()
+                        ?.firstOrNull { it.id == b.vehicleId }
+                    _uiState.value = _uiState.value.copy(
+                        loadingBooking = false, booking = b, vehicle = vehicle, error = null
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(loadingBooking = false, error = e.message)
+                }
+            )
+        }
+    }
+
+    /**
+     * The backend accepts only MOBILE_BANKING / CARD / CASH_AT_STATION, so the
+     * wallet buttons on this screen map onto MOBILE_BANKING.
+     */
+    fun pay(uiMethod: String, forceFailure: Boolean) {
+        val backendMethod = when (uiMethod) {
+            "APPLE_PAY", "GOOGLE_PAY" -> "MOBILE_BANKING"
+            "CASH" -> "CASH_AT_STATION"
+            else -> "CARD"
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(processing = true, error = null)
+            repository.pay(bookingId, backendMethod, forceFailure).fold(
                 onSuccess = { p ->
                     val success = p.status == "SUCCESS"
-                    _uiState.value = PaymentUiState(
+                    _uiState.value = _uiState.value.copy(
+                        processing = false,
                         result = PaymentResult(
                             success = success,
                             message = if (success)
@@ -65,22 +105,32 @@ class PaymentViewModel(private val bookingId: String) : ViewModel() {
                         )
                     )
                 },
-                onFailure = { e -> _uiState.value = PaymentUiState(error = e.message) }
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(processing = false, error = e.message)
+                }
             )
         }
     }
 }
 
+/** `12.5` → `"12.50"`, so amounts read like money. */
+private fun money(value: Double): String =
+    "৳" + String.format(java.util.Locale.US, "%.2f", value)
+
 @Composable
 fun PaymentScreen(
     bookingId: String,
     onBack: () -> Unit,
-    onDone: () -> Unit
+    onDone: (String) -> Unit
 ) {
     val vm: PaymentViewModel = viewModel(
         factory = viewModelFactory { initializer { PaymentViewModel(bookingId) } }
     )
     val state by vm.uiState.collectAsState()
+    val booking = state.booking
+    val total = booking?.amount ?: 0.0
+    // The backend stores one flat amount per booking; show it as a fee + energy split.
+    val energyCost = (total - RESERVATION_FEE).coerceAtLeast(0.0)
     var method by remember { mutableStateOf("CARD") }
     var forceFailure by remember { mutableStateOf(false) }
     var cardName by remember { mutableStateOf("") }
@@ -178,7 +228,7 @@ fun PaymentScreen(
                     Spacer(Modifier.height(20.dp))
                     EvPrimaryButton(
                         "Go to My Bookings",
-                        onClick = onDone,
+                        onClick = { onDone(bookingId) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -209,19 +259,30 @@ fun PaymentScreen(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("GreenPulse Hub", style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
-                    Text("Oct 24 • 14:30 – 15:15 (45 min)", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+                    Text(
+                        booking?.stationName ?: if (state.loadingBooking) "Loading booking…" else "Booking",
+                        style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        booking?.let { formatWindow(it.startTime, it.endTime) } ?: "—",
+                        style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar
+                    )
                 }
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(EvColors.SurfaceHigh)
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Text("Bay 04", style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurface)
+                booking?.let { b ->
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(EvColors.SurfaceHigh)
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(b.serviceName, style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurface)
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    StatusPill(
+                        if (b.status == "CONFIRMED") "Confirmed" else "Reserved",
+                        isActive = b.status == "CONFIRMED"
+                    )
                 }
-                Spacer(Modifier.width(6.dp))
-                StatusPill("Reserved", isActive = false)
             }
 
             Spacer(Modifier.height(10.dp))
@@ -239,19 +300,31 @@ fun PaymentScreen(
                 Icon(Icons.Filled.ElectricCar, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(32.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Tesla Model 3", style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
-                    Text("Long Range Dual Motor…", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+                    val v = state.vehicle
+                    Text(
+                        listOfNotNull(v?.manufacturer, v?.model).joinToString(" ").ifBlank { "Your vehicle" },
+                        style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        v?.let { "${it.registrationNo} · ${it.vehicleType.replace('_', ' ').lowercase()}" } ?: "—",
+                        style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar
+                    )
                 }
-                Row(
-                    Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(EvColors.Error.copy(0.1f))
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(Icons.Filled.BatteryAlert, null, tint = EvColors.Error, modifier = Modifier.size(14.dp))
-                    Text("24% Current", style = MaterialTheme.typography.labelSmall, color = EvColors.Error)
+                state.vehicle?.batteryCapacityKwh?.let { kwh ->
+                    Row(
+                        Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(EvColors.PrimaryDim)
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Filled.BatteryChargingFull, null, tint = EvColors.Primary, modifier = Modifier.size(14.dp))
+                        Text(
+                            "${kwh.toBigDecimal().stripTrailingZeros().toPlainString()} kWh",
+                            style = MaterialTheme.typography.labelSmall, color = EvColors.Primary
+                        )
+                    }
                 }
             }
 
@@ -368,15 +441,18 @@ fun PaymentScreen(
                     Text("Cost Breakdown", style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Icon(Icons.Filled.Bolt, null, tint = EvColors.Primary, modifier = Modifier.size(12.dp))
-                        Text("Est. +48 kWh", style = MaterialTheme.typography.labelSmall, color = EvColors.Primary)
+                        Text(
+                            booking?.serviceName ?: "Simulated",
+                            style = MaterialTheme.typography.labelSmall, color = EvColors.Primary
+                        )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                CostRow("Reservation Fee", "$2.50")
+                CostRow("Est. charging cost", money(energyCost), sublabel = "Simulated")
                 Spacer(Modifier.height(8.dp))
-                CostRow("Est. Charging Cost", "$17.60", sublabel = "Tier 1")
+                CostRow("Reservation fee", money(RESERVATION_FEE))
                 Spacer(Modifier.height(8.dp))
-                CostRow("Tax & Regulatory Fees", "$1.71")
+                CostRow("Tax & regulatory fees", "Included")
                 Spacer(Modifier.height(12.dp))
                 HorizontalDivider(color = EvColors.SurfaceBorder)
                 Spacer(Modifier.height(12.dp))
@@ -385,7 +461,7 @@ fun PaymentScreen(
                         Text("Total Amount", style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
                         Text("Holds applied upon session start", style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
                     }
-                    Text("$21.81", style = MaterialTheme.typography.headlineMedium, color = EvColors.Primary, fontWeight = FontWeight.Bold)
+                    Text(money(total), style = MaterialTheme.typography.headlineMedium, color = EvColors.Primary, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -417,10 +493,10 @@ fun PaymentScreen(
 
             // ── Pay CTA ───────────────────────────────────────────────────
             EvPrimaryButton(
-                text = "Pay & Reserve Bay ($21.81)",
+                text = if (state.loadingBooking) "Pay & Reserve Bay" else "Pay & Reserve Bay (${money(total)})",
                 onClick = { vm.pay("CARD", forceFailure) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !state.processing,
+                enabled = !state.processing && !state.loadingBooking,
                 loading = state.processing,
                 icon = Icons.Filled.Lock
             )
@@ -440,6 +516,26 @@ fun PaymentScreen(
             Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+/** `"2026-09-20T14:30:00"` pair → `"Sep 20 • 14:30 – 15:15 (45 min)"`. */
+private fun formatWindow(start: String, end: String): String {
+    if (start.length < 16 || end.length < 16) return "$start – $end"
+    val date = start.take(10)
+    val startClock = start.substring(11, 16)
+    val endClock = end.substring(11, 16)
+    val minutes = runCatching {
+        val fmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+        java.time.Duration.between(
+            java.time.LocalTime.parse(startClock, fmt),
+            java.time.LocalTime.parse(endClock, fmt)
+        ).toMinutes()
+    }.getOrDefault(0L)
+    val day = runCatching {
+        java.time.LocalDate.parse(date).format(java.time.format.DateTimeFormatter.ofPattern("MMM d"))
+    }.getOrDefault(date)
+    return if (minutes > 0) "$day • $startClock – $endClock ($minutes min)"
+    else "$day • $startClock – $endClock"
 }
 
 @Composable
