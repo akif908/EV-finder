@@ -20,6 +20,10 @@ class StationRepository {
     suspend fun getStation(id: String): Result<StationDto> =
         handle { api.getStation(id) }
 
+    /** Average rating + reviews for a station (reviews controller). */
+    suspend fun stationReviews(stationId: String): Result<com.example.evfinder.core.model.StationReviewsDto> =
+        handle { api.stationReviews(stationId) }
+
     private suspend fun <T> handle(call: suspend () -> Response<T>): Result<T> {
         return try {
             val response = call()

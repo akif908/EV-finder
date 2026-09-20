@@ -7,6 +7,7 @@ import com.example.EV_finder_api.exception.*;
 import com.example.EV_finder_api.repository.*;
 import com.example.EV_finder_api.security.CurrentUserProvider;
 import com.example.EV_finder_api.service.BookingService;
+import com.example.EV_finder_api.service.NotificationService;
 import com.example.EV_finder_api.websocket.AvailabilityWebSocketHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,19 +25,22 @@ public class BookingServiceImpl implements BookingService {
     private final StationServiceRepository stationServiceRepository;
     private final CurrentUserProvider currentUserProvider;
     private final AvailabilityWebSocketHandler availabilitySocket;
+    private final NotificationService notificationService;
 
     public BookingServiceImpl(BookingRepository bookingRepository,
                               PaymentRepository paymentRepository,
                               VehicleRepository vehicleRepository,
                               StationServiceRepository stationServiceRepository,
                               CurrentUserProvider currentUserProvider,
-                              AvailabilityWebSocketHandler availabilitySocket) {
+                              AvailabilityWebSocketHandler availabilitySocket,
+                              NotificationService notificationService) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.vehicleRepository = vehicleRepository;
         this.stationServiceRepository = stationServiceRepository;
         this.currentUserProvider = currentUserProvider;
         this.availabilitySocket = availabilitySocket;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -86,6 +90,12 @@ public class BookingServiceImpl implements BookingService {
                 .build();
         booking = bookingRepository.save(booking);
         availabilitySocket.broadcastAvailability(service); // live update to all clients
+        // notify the station's operator that someone booked their charger
+        notificationService.notify(
+                station.getOperator().getId(),
+                "New booking received",
+                user.getName() + " booked " + station.getName() + " for " + booking.getStartTime() + ".",
+                Notification.NotificationType.NEW_BOOKING);
         return BookingResponse.from(booking, service.getPricePerUnit());
     }
 
@@ -101,6 +111,24 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public List<BookingResponse> myBookingsByStatus(BookingStatus status) {
         return myBookings().stream().filter(b -> b.status() == status).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingResponse> bookingsForMyStations() {
+        String operatorId = currentUserProvider.getCurrentUser().getId();
+        return bookingRepository.findByStationOperatorId(operatorId)
+                .stream().map(this::withAmount).toList();
+    }
+
+    /** Package-visible helper used by the payment service. */
+    Booking bookingForPayment(String bookingId, String userId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found: " + bookingId));
+        if (!booking.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("You can only pay for your own bookings");
+        }
+        return booking;
     }
 
     @Override
@@ -125,6 +153,12 @@ public class BookingServiceImpl implements BookingService {
         });
         bookingRepository.save(booking);
         availabilitySocket.broadcastAvailability(booking.getService()); // slot back on the market
+        notificationService.notify(
+                booking.getStation().getOperator().getId(),
+                "Booking cancelled",
+                booking.getUser().getName() + " cancelled their booking at "
+                        + booking.getStation().getName() + " — the slot is free again.",
+                Notification.NotificationType.BOOKING_CANCELLED);
         return BookingResponse.from(booking, amountOf(booking));
     }
 

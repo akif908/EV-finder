@@ -2,6 +2,14 @@
 
 package com.example.evfinder.feature.booking
 
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -13,12 +21,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -31,19 +39,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.evfinder.ui.theme.EvColors
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun BookingScreen(
     serviceId: String,
-    onBookingCreated: (bookingId: String) -> Unit
+    onBookingCreated: (bookingId: String) -> Unit,
+    onBack: () -> Unit = {}
 ) {
     val vm: BookingViewModel = viewModel(
         factory = viewModelFactory { initializer { BookingViewModel(serviceId) } }
@@ -60,11 +74,31 @@ fun BookingScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text("Book a slot", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        // back button — booking flow is always reversible
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(EvColors.Background)
+                    .border(1.dp, EvColors.OutlineVariant, RoundedCornerShape(10.dp))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("←", style = MaterialTheme.typography.titleMedium, color = EvColors.OnSurface)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text("Book a slot", style = MaterialTheme.typography.headlineSmall,
+                    color = EvColors.OnBackground, fontWeight = FontWeight.Bold)
+                Text("Vehicle → date → time", style = MaterialTheme.typography.labelSmall,
+                    color = EvColors.OnSurfaceVar)
+            }
+        }
 
         state.error?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text(it, color = EvColors.Error, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(16.dp))
 
@@ -106,7 +140,7 @@ fun BookingScreen(
             state.slotsLoading -> CircularProgressIndicator()
             state.slots.isEmpty() -> Text(
                 "No slots for this day (station closed or inactive).",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = EvColors.OnSurfaceVar
             )
             else -> FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -128,34 +162,41 @@ fun BookingScreen(
 
         // ---- 4. Summary + submit ----
         state.selectedSlot?.let { slot ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            com.example.evfinder.ui.components.EvCard(Modifier.fillMaxWidth(), color = EvColors.Surface) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("Summary", fontWeight = FontWeight.SemiBold)
+                    Text("SUMMARY", style = MaterialTheme.typography.labelSmall,
+                        color = EvColors.Primary, letterSpacing = 1.sp)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "${state.selectedDate.format(DateTimeFormatter.ofPattern("EEE, dd MMM"))} · " +
                             "${slot.startTime.substring(11, 16)} – ${slot.endTime.substring(11, 16)}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = EvColors.OnSurfaceVar
                     )
                 }
             }
             Spacer(Modifier.height(12.dp))
         }
-        Button(
+        com.example.evfinder.ui.components.EvPrimaryButton(
+            text = "Continue to Payment",
             onClick = vm::submitBooking,
             enabled = state.selectedVehicleId != null && state.selectedSlot != null && !state.submitting,
+            loading = state.submitting,
+            trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
             modifier = Modifier.fillMaxWidth()
-        ) {
-            if (state.submitting) CircularProgressIndicator(Modifier.height(20.dp), strokeWidth = 2.dp)
-            else Text("Continue to Payment")
-        }
+        )
         Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    Text(
+        text.uppercase(),
+        style = MaterialTheme.typography.labelLarge,
+        color = EvColors.Primary,
+        letterSpacing = 1.sp,
+        fontWeight = FontWeight.SemiBold
+    )
     Spacer(Modifier.height(8.dp))
 }
 
@@ -163,7 +204,7 @@ private fun SectionTitle(text: String) {
 private fun AddVehicleInline(onAdd: (vehicleType: String, regNo: String) -> Unit) {
     var type by remember { mutableStateOf("ELECTRIC_CAR") }
     var regNo by remember { mutableStateOf("") }
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    com.example.evfinder.ui.components.EvCard(Modifier.fillMaxWidth(), color = EvColors.Surface) {
         Column(Modifier.padding(16.dp)) {
             Text("Add your EV to continue", style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(8.dp))
@@ -182,10 +223,12 @@ private fun AddVehicleInline(onAdd: (vehicleType: String, regNo: String) -> Unit
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
-            Button(
+            com.example.evfinder.ui.components.EvPrimaryButton(
+                text = "Add vehicle",
                 onClick = { onAdd(type, regNo.trim()) },
-                enabled = regNo.isNotBlank()
-            ) { Text("Add vehicle") }
+                enabled = regNo.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -197,6 +240,7 @@ private fun vehicleLabel(type: String) = when (type) {
     else -> type
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 private fun dateLabel(date: LocalDate): String {
     val today = LocalDate.now()
     return when (date) {

@@ -30,10 +30,21 @@ class BookingRepository {
     suspend fun myBookings(status: String? = null): Result<List<BookingDto>> =
         handle { api.getMyBookings(status) }
 
+    /** Booking details for the payment screen summary. */
+    suspend fun booking(id: String): Result<BookingDto> = handle { api.getBooking(id) }
+
     suspend fun cancelBooking(id: String): Result<BookingDto> = handle { api.cancelBooking(id) }
 
     suspend fun pay(bookingId: String, method: String, forceFailure: Boolean): Result<PaymentDto> =
         handle { api.pay(bookingId, PaymentRequestDto(method, forceFailure)) }
+
+    /** Rate a station after the booked time has passed (one review per booking). */
+    suspend fun submitReview(bookingId: String, rating: Int, comment: String?): Result<com.example.evfinder.core.model.ReviewItemDto> =
+        handle {
+            api.createReview(
+                com.example.evfinder.core.model.ReviewRequestDto(bookingId, rating, comment?.takeIf { it.isNotBlank() })
+            )
+        }
 
     private suspend fun <T> handle(call: suspend () -> Response<T>): Result<T> {
         return try {

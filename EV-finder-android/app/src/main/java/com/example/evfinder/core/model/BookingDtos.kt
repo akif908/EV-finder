@@ -28,6 +28,7 @@ data class BookingRequestDto(
 data class BookingDto(
     val id: String,
     val userId: String,
+    val userName: String? = null,
     val vehicleId: String,
     val stationId: String,
     val stationName: String,

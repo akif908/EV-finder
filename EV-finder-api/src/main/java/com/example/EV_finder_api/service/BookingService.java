@@ -15,6 +15,9 @@ public interface BookingService {
 
     List<BookingResponse> myBookingsByStatus(BookingStatus status);
 
+    /** Operator view: all bookings at stations this operator owns. */
+    List<BookingResponse> bookingsForMyStations();
+
     BookingResponse details(String bookingId);
 
     BookingResponse cancel(String bookingId);

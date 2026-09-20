@@ -160,7 +160,8 @@ CREATE TABLE notifications (
   user_id         VARCHAR(36) NOT NULL,
   title           VARCHAR(150) NOT NULL,
   message         VARCHAR(500) NOT NULL,
-  type            ENUM('BOOKING_CONFIRMED','BOOKING_CANCELLED','BOOKING_REMINDER','AVAILABILITY','GENERAL') NOT NULL DEFAULT 'GENERAL',
+  -- VARCHAR (not ENUM) so new notification types don't need a schema migration
+  type            VARCHAR(30) NOT NULL DEFAULT 'GENERAL',
   is_read         BOOLEAN NOT NULL DEFAULT FALSE,
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (notification_id),

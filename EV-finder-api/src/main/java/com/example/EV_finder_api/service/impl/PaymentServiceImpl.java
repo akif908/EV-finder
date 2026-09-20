@@ -8,6 +8,7 @@ import com.example.EV_finder_api.exception.ValidationException;
 import com.example.EV_finder_api.repository.PaymentRepository;
 import com.example.EV_finder_api.security.CurrentUserProvider;
 import com.example.EV_finder_api.service.BookingService;
+import com.example.EV_finder_api.service.NotificationService;
 import com.example.EV_finder_api.service.PaymentService;
 import com.example.EV_finder_api.websocket.AvailabilityWebSocketHandler;
 import org.springframework.stereotype.Service;
@@ -23,15 +24,18 @@ public class PaymentServiceImpl implements PaymentService {
     private final BookingServiceImpl bookingServiceImpl;
     private final CurrentUserProvider currentUserProvider;
     private final AvailabilityWebSocketHandler availabilitySocket;
+    private final NotificationService notificationService;
 
     public PaymentServiceImpl(PaymentRepository paymentRepository,
                               BookingServiceImpl bookingServiceImpl,
                               CurrentUserProvider currentUserProvider,
-                              AvailabilityWebSocketHandler availabilitySocket) {
+                              AvailabilityWebSocketHandler availabilitySocket,
+                              NotificationService notificationService) {
         this.paymentRepository = paymentRepository;
         this.bookingServiceImpl = bookingServiceImpl;
         this.currentUserProvider = currentUserProvider;
         this.availabilitySocket = availabilitySocket;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -63,7 +67,27 @@ public class PaymentServiceImpl implements PaymentService {
         payment = paymentRepository.save(payment);
 
         booking.setStatus(success ? BookingStatus.CONFIRMED : BookingStatus.CANCELLED);
-        if (!success) {
+        if (success) {
+            // user confirmation + operator heads-up
+            notificationService.notify(
+                    booking.getUser().getId(),
+                    "Booking confirmed",
+                    booking.getStation().getName() + " · " + booking.getStartTime()
+                            + " — present your booking reference at the station.",
+                    Notification.NotificationType.BOOKING_CONFIRMED);
+            notificationService.notify(
+                    booking.getStation().getOperator().getId(),
+                    "Booking confirmed & paid",
+                    booking.getUser().getName() + "'s booking at " + booking.getStation().getName()
+                            + " is paid and confirmed.",
+                    Notification.NotificationType.NEW_BOOKING);
+        } else {
+            notificationService.notify(
+                    booking.getUser().getId(),
+                    "Payment failed",
+                    "Your payment for " + booking.getStation().getName()
+                            + " failed and the slot was released.",
+                    Notification.NotificationType.PAYMENT_FAILED);
             // failed payment releases the slot — tell everyone live
             availabilitySocket.broadcastAvailability(booking.getService());
         }

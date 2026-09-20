@@ -11,6 +11,9 @@ data class StationDto(
     val openingTime: String?,
     val closingTime: String?,
     val status: String,
+    /** Aggregated review score (0 when never rated) — stations rank by this. */
+    val averageRating: Double = 0.0,
+    val reviewCount: Int = 0,
     val services: List<ServiceDto> = emptyList()
 )
 

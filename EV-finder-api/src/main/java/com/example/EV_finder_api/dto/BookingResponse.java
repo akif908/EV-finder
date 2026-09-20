@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public record BookingResponse(
         String id,
         String userId,
+        String userName,
         String vehicleId,
         String stationId,
         String stationName,
@@ -22,7 +23,7 @@ public record BookingResponse(
 ) {
     public static BookingResponse from(Booking b, BigDecimal amount) {
         return new BookingResponse(
-                b.getId(), b.getUser().getId(), b.getVehicle().getId(),
+                b.getId(), b.getUser().getId(), b.getUser().getName(), b.getVehicle().getId(),
                 b.getStation().getId(), b.getStation().getName(),
                 b.getService().getId(), b.getService().getServiceType().name(),
                 b.getStartTime(), b.getEndTime(), b.getStatus(),

@@ -12,6 +12,10 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
 
     List<Booking> findByUserIdOrderByStartTimeDesc(String userId);
 
+    /** All bookings at stations owned by the given operator. */
+    @Query("SELECT b FROM Booking b WHERE b.station.operator.id = :operatorId ORDER BY b.startTime DESC")
+    List<Booking> findByStationOperatorId(@Param("operatorId") String operatorId);
+
     /**
      * Double-booking prevention: counts active bookings whose [start,end)
      * window overlaps the requested window. Supported by index
