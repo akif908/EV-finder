@@ -2,68 +2,36 @@
 
 package com.example.evfinder.feature.home
 
-import android.content.Context
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Cable
-import androidx.compose.material.icons.filled.EvStation
-import androidx.compose.material.icons.filled.LocalGasStation
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.evfinder.core.model.BookingDto
+import com.example.evfinder.core.model.ServiceDto
 import com.example.evfinder.core.model.StationDto
-import com.example.evfinder.core.network.OverpassClient
-import com.example.evfinder.ui.components.EvCard
-import com.example.evfinder.ui.components.EvFilterChip
-import com.example.evfinder.ui.components.LiveDot
-import com.example.evfinder.ui.components.EvSpecTile
-import com.example.evfinder.ui.components.StatusPill
-import com.example.evfinder.ui.components.evCircleMarker
+import com.example.evfinder.ui.components.*
 import com.example.evfinder.ui.theme.EvColors
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -71,96 +39,111 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 /**
- * Find Stations — Voltage Mobility design: title row with station mark, pill
- * search bar, EV/Fuel/LPG filter chips, live map preview, upcoming booking
- * banner and rich station result cards.
+ * Find Stations / Dashboard tab – premium redesign.
  */
 @Composable
 fun HomeScreen(
     onStationClick: (String) -> Unit,
     onOpenMap: () -> Unit,
-    onOpenNotifications: () -> Unit,
     onSessionExpired: () -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    // Re-fetch silently every time the user lands on this tab, so the station
+    // list and the upcoming-booking banner always reflect the latest state.
     LaunchedEffect(Unit) {
         if (viewModel.uiState.value.stations.isNotEmpty()) viewModel.silentRefresh()
     }
 
     LazyColumn(
-        Modifier.fillMaxSize().background(EvColors.Background),
+        Modifier
+            .fillMaxSize()
+            .background(EvColors.Background),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
+        // ── App bar ───────────────────────────────────────────────────────
         item {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Logo
                 Box(
                     Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(EvColors.Primary.copy(alpha = 0.12f)),
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(EvColors.PrimaryDim)
+                        .border(1.dp, EvColors.Primary.copy(0.35f), RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.EvStation, null, tint = EvColors.Primary, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Filled.Bolt, null, tint = EvColors.Primary, modifier = Modifier.size(20.dp))
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Find Stations", style = MaterialTheme.typography.headlineSmall,
-                        color = EvColors.OnBackground, fontWeight = FontWeight.Bold)
+                    Text("EV FINDER", style = MaterialTheme.typography.labelSmall, color = EvColors.Primary, letterSpacing = 1.sp)
+                    Text("Find Stations", style = MaterialTheme.typography.titleMedium, color = EvColors.OnBackground, fontWeight = FontWeight.Bold)
+                }
+                // Map shortcut (fullscreen osmdroid map with station markers)
+                Box(
+                    Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(EvColors.SurfaceHigh)
+                        .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(10.dp))
+                        .clickable(onClick = onOpenMap),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Outlined.Map, null, tint = EvColors.OnSurface, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(8.dp))
+                // Live badge
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(EvColors.SurfaceHigh)
+                        .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(50))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LiveDot(state.liveUpdates)
+                    Spacer(Modifier.width(5.dp))
                     Text(
-                        if (state.liveUpdates) "Live availability on" else "Showing cached results",
-                        style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar
+                        if (state.liveUpdates) "Live" else "Offline",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (state.liveUpdates) EvColors.Primary else EvColors.OnSurfaceVar
                     )
                 }
-                IconAction(Icons.Filled.Notifications, "Notifications", onOpenNotifications)
-                Spacer(Modifier.width(8.dp))
-                IconAction(Icons.Outlined.Map, "Map", onOpenMap, EvColors.Primary)
             }
         }
 
-        // search
+        // ── Search bar ────────────────────────────────────────────────────
         item {
             Row(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(EvColors.SurfaceLowest)
-                    .border(1.dp, EvColors.OutlineVariant.copy(alpha = 0.4f), RoundedCornerShape(50))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(EvColors.SurfaceHigh)
+                    .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Filled.Search, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(20.dp))
+                Icon(Icons.Outlined.Search, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
-                BasicTextField(
+                BasicSearchField(
                     value = state.query,
                     onValueChange = viewModel::onQueryChanged,
-                    modifier = Modifier.weight(1f),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = EvColors.OnBackground),
-                    singleLine = true,
-                    cursorBrush = SolidColor(EvColors.Primary),
-                    decorationBox = { inner ->
-                        if (state.query.isEmpty()) {
-                            Text("Search by location or station name…",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = EvColors.OnSurfaceVar.copy(alpha = 0.6f))
-                        }
-                        inner()
-                    }
+                    placeholder = "Austin, TX",
+                    modifier = Modifier.weight(1f)
                 )
-                if (state.loading) {
-                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = EvColors.Primary)
-                } else {
-                    LiveDot(state.liveUpdates)
-                }
+                Icon(Icons.Outlined.MyLocation, null, tint = EvColors.Primary, modifier = Modifier.size(20.dp))
             }
         }
 
-        // chips + map preview
+        // ── Filter chips + live map preview (EV / Fuel / LPG layers) ───────
         item {
             HomeFiltersAndPreview(
                 stations = state.stations,
@@ -169,121 +152,296 @@ fun HomeScreen(
             )
         }
 
-        // search filters / sorting
-        item {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    EvFilterChip("Available now", state.onlyAvailable,
-                        { viewModel.toggleOnlyAvailable() }, Icons.Filled.Bolt)
-                }
-                items(HomeViewModel.SORTS) { (mode, label) ->
-                    EvFilterChip(label, state.sortMode == mode, { viewModel.setSort(mode) })
-                }
-            }
-        }
-
-        state.upcoming?.let { upcoming ->
+        // ── Upcoming booking preview (if any) ────────────────────────────
+        val upcoming = state.upcoming
+        if (upcoming != null) {
             item {
-                Spacer(Modifier.height(12.dp))
-                UpcomingBanner(upcoming)
+                Spacer(Modifier.height(4.dp))
+                UpcomingBannerCard(upcoming, modifier = Modifier.padding(horizontal = 16.dp))
             }
         }
 
+        // ── Stations header ───────────────────────────────────────────────
         item {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    if (state.query.isBlank()) "Nearby stations" else "Results",
+                    if (state.query.isBlank()) "Nearby Stations" else "Search results",
                     style = MaterialTheme.typography.titleMedium,
-                    color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold,
+                    color = EvColors.OnBackground,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
-                Text("${state.visibleStations.size} found",
-                    style = MaterialTheme.typography.labelMedium, color = EvColors.OnSurfaceVar)
+                if (state.loading) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = EvColors.Primary)
             }
         }
 
+        // ── Station list ──────────────────────────────────────────────────
         when {
             state.error != null -> item {
                 Column(
-                    Modifier.fillMaxWidth().padding(24.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(state.error!!, color = EvColors.Error, style = MaterialTheme.typography.bodySmall)
+                    Icon(Icons.Filled.WifiOff, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(12.dp))
-                    SmallGreenButton(
-                        if (state.error!!.startsWith("Session expired")) "Log in again" else "Retry",
-                        if (state.error!!.startsWith("Session expired")) onSessionExpired else viewModel::refresh
-                    )
+                    Text(state.error!!, color = EvColors.Error, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(12.dp))
+                    if (state.error!!.startsWith("Session expired")) {
+                        EvPrimaryButton("Log in again", onClick = onSessionExpired, modifier = Modifier.fillMaxWidth(0.6f))
+                    } else {
+                        TextButton(onClick = viewModel::refresh) {
+                            Text("Retry", color = EvColors.Primary)
+                        }
+                    }
                 }
             }
 
-            state.visibleStations.isEmpty() && !state.loading -> item {
-                Column(
-                    Modifier.fillMaxWidth().padding(vertical = 40.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(Icons.Filled.EvStation, null, tint = EvColors.OnSurfaceVar,
-                        modifier = Modifier.size(44.dp))
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        if (state.query.isBlank()) "No active stations yet"
-                        else "No stations match \"${state.query}\"",
-                        style = MaterialTheme.typography.bodyMedium, color = EvColors.OnSurfaceVar
-                    )
+            state.stations.isEmpty() && !state.loading -> item {
+                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Filled.SearchOff, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(40.dp))
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            if (state.query.isBlank()) "No active stations yet"
+                            else "No stations match \"${state.query}\"",
+                            color = EvColors.OnSurfaceVar
+                        )
+                    }
                 }
             }
 
-            else -> items(state.visibleStations, key = { it.id }) { station ->
-                StationResultCard(station, onClick = { onStationClick(station.id) })
+            else -> {
+                // Featured top station (full card)
+                val featured = state.stations.firstOrNull()
+                if (featured != null) {
+                    item {
+                        FeaturedStationCard(
+                            station = featured,
+                            onClick = { onStationClick(featured.id) },
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                }
+                // Remaining as compact list rows
+                if (state.stations.size > 1) {
+                    items(state.stations.drop(1), key = { it.id }) { station ->
+                        CompactStationRow(
+                            station = station,
+                            onClick = { onStationClick(station.id) },
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        HorizontalDivider(
+                            Modifier.padding(horizontal = 16.dp),
+                            color = EvColors.SurfaceBorder.copy(0.5f)
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+// ─── Featured full station card ───────────────────────────────────────────────
 @Composable
-private fun IconAction(
+private fun FeaturedStationCard(station: StationDto, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    EvCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        station.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = EvColors.OnBackground
+                    )
+                    station.address?.let {
+                        Spacer(Modifier.height(3.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Navigation, null, tint = EvColors.Primary, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+                        }
+                    }
+                }
+                Icon(Icons.Outlined.FavoriteBorder, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.height(14.dp))
+
+            // Stat row
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatPill(icon = Icons.Filled.Bolt, label = "350 kW", sublabel = "UltraFast")
+                StatPill(icon = Icons.Filled.Cable, label = "CCS ×4", sublabel = "NACS / CCS")
+                StatusPill(label = "2 of 4 Open")
+            }
+
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = EvColors.SurfaceBorder.copy(0.4f))
+            Spacer(Modifier.height(12.dp))
+
+            // Amenities row
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                station.services.firstOrNull()?.let {
+                    Text(
+                        "৳${it.pricePerUnit.toBigDecimal().stripTrailingZeros().toPlainString()} / kWh",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = EvColors.OnSurface
+                    )
+                }
+                AmenityTag(Icons.Filled.LocalCafe, "Cafe")
+                AmenityTag(Icons.Filled.Wifi, "Free WiFi")
+                Spacer(Modifier.weight(1f))
+                Text("No idle fee", style = MaterialTheme.typography.labelSmall, color = EvColors.Primary)
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // CTA
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                EvPrimaryButton(
+                    "Route & Reserve Stall",
+                    onClick = onClick,
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Filled.Diamond
+                )
+                Box(
+                    Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(EvColors.SurfaceHigh)
+                        .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Outlined.Share, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+    }
+}
+
+// ─── Compact station row ─────────────────────────────────────────────────────
+@Composable
+private fun CompactStationRow(station: StationDto, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(EvColors.PrimaryDim),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Filled.EvStation, null, tint = EvColors.Primary, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(station.name, style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(2.dp))
+            val kw = station.services.firstOrNull()?.powerKw?.toInt()?.toString() ?: "?"
+            Text("$kw kW  •  ${station.services.size} Available", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            LiveDot(station.status == "ACTIVE")
+            Spacer(Modifier.height(4.dp))
+            Icon(Icons.Filled.ChevronRight, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+// ─── Upcoming booking banner ──────────────────────────────────────────────────
+@Composable
+private fun UpcomingBannerCard(booking: BookingDto, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(EvColors.PrimaryDim)
+            .border(1.dp, EvColors.Primary.copy(0.3f), RoundedCornerShape(14.dp))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Filled.CalendarMonth, null, tint = EvColors.Primary, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Next booking", style = MaterialTheme.typography.labelSmall, color = EvColors.Primary, fontWeight = FontWeight.Bold)
+            Text(booking.stationName, style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
+            Text(
+                "${booking.startTime.take(10)} · ${booking.startTime.substring(11, 16)}–${booking.endTime.substring(11, 16)}",
+                style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar
+            )
+        }
+        StatusPill(if (booking.status == "CONFIRMED") "Confirmed" else "Pending", booking.status == "CONFIRMED")
+    }
+}
+
+// ─── Stat pill ────────────────────────────────────────────────────────────────
+@Composable
+private fun StatPill(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    onClick: () -> Unit,
-    tint: Color = EvColors.OnSurface
+    sublabel: String
 ) {
-    Box(
-        Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(EvColors.Surface)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, label, tint = tint, modifier = Modifier.size(20.dp))
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = EvColors.Primary, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(label, style = MaterialTheme.typography.titleSmall, color = EvColors.OnBackground, fontWeight = FontWeight.Bold)
+        }
+        Text(sublabel, style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
     }
 }
 
+// ─── Amenity tag ──────────────────────────────────────────────────────────────
 @Composable
-private fun SmallGreenButton(text: String, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(EvColors.Primary)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 10.dp)
-    ) {
-        Text(text, color = EvColors.OnPrimary, style = MaterialTheme.typography.labelLarge)
+private fun AmenityTag(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Icon(icon, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(12.dp))
+        Text(text, style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
     }
 }
 
+// ─── Minimal text-only search input ──────────────────────────────────────────
+@Composable
+private fun BasicSearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.foundation.text.BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = EvColors.OnBackground),
+        decorationBox = { inner ->
+            if (value.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = EvColors.OnSurfaceVar)
+            inner()
+        },
+        singleLine = true,
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(EvColors.Primary)
+    )
+}
+
+// ─── Filter chips + live map preview (EV / Fuel / LPG layers) ────────────────
 @Composable
 private fun HomeFiltersAndPreview(
     stations: List<StationDto>,
-    pois: List<OverpassClient.Poi>,
+    pois: List<com.example.evfinder.core.network.OverpassClient.Poi>,
     onOpenMap: () -> Unit
 ) {
+    // chip state is local to this composable, so the item block above doesn't
+    // reset it and the map preview below always sees the latest values
     var showEv by remember { mutableStateOf(true) }
     var showFuel by remember { mutableStateOf(true) }
     var showLpg by remember { mutableStateOf(true) }
@@ -292,9 +450,9 @@ private fun HomeFiltersAndPreview(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item { EvFilterChip("Available Now", showEv, { showEv = !showEv }, Icons.Filled.Bolt) }
-        item { EvFilterChip("Fuel", showFuel, { showFuel = !showFuel }, Icons.Filled.LocalGasStation) }
-        item { EvFilterChip("LPG", showLpg, { showLpg = !showLpg }, Icons.Filled.LocalGasStation) }
+        item { FilterChipPill("⚡ Available Now", Icons.Filled.Bolt, showEv) { showEv = !showEv } }
+        item { FilterChipPill("Fuel", Icons.Filled.LocalGasStation, showFuel) { showFuel = !showFuel } }
+        item { FilterChipPill("LPG", Icons.Filled.LocalGasStation, showLpg) { showLpg = !showLpg } }
     }
 
     HomeMapPreview(
@@ -305,11 +463,35 @@ private fun HomeFiltersAndPreview(
     )
 }
 
+// ─── Filter chip pill (EV / Fuel / LPG layers) ───────────────────────────────
+@Composable
+private fun FilterChipPill(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    onToggle: () -> Unit
+) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) EvColors.Primary else EvColors.SurfaceHigh)
+            .border(1.dp, if (selected) EvColors.Primary else EvColors.SurfaceBorder, RoundedCornerShape(50))
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(icon, null, tint = if (selected) EvColors.OnPrimary else EvColors.OnSurfaceVar, modifier = Modifier.size(16.dp))
+        Text(label, color = if (selected) EvColors.OnPrimary else EvColors.OnSurface, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+// ─── Live map preview with EV pins + fuel/LPG dots ───────────────────────────
 @Composable
 private fun HomeMapPreview(
     stations: List<StationDto>,
-    fuelPois: List<OverpassClient.Poi>,
-    lpgPois: List<OverpassClient.Poi>,
+    fuelPois: List<com.example.evfinder.core.network.OverpassClient.Poi>,
+    lpgPois: List<com.example.evfinder.core.network.OverpassClient.Poi>,
     onOpenMap: () -> Unit
 ) {
     Box(
@@ -317,28 +499,30 @@ private fun HomeMapPreview(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .height(200.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(EvColors.SurfaceLowest)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF1C2B1A))
     ) {
         AndroidView(
             factory = { ctx ->
                 MapView(ctx).apply {
                     setTileSource(TileSourceFactory.MAPNIK)
                     setMultiTouchControls(false)
-                    isTilesScaledToDpi = true
                     zoomController.setVisibility(
                         org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER
                     )
+                    isTilesScaledToDpi = true
                     controller.setZoom(11.5)
-                    controller.setCenter(GeoPoint(23.7810, 90.4150))
+                    controller.setCenter(GeoPoint(23.7810, 90.4150)) // Dhaka
                 }
             },
             update = { map ->
-                val key = stations.size * 100003 + fuelPois.size * 137 + lpgPois.size
-                if ((map.tag as? Int) != key) {
+                // Build a key from what we're actually drawing so the map
+                // rebuilds when the data changes (chip toggles, POI load, etc.)
+                val key = (stations.size * 100003) + (fuelPois.size * 137) + lpgPois.size
+                if (map.tag as? Int != key) {
                     map.tag = key
                     map.overlays.clear()
-                    val ctx: Context = map.context
+                    val ctx = map.context
                     stations.forEach { station ->
                         map.overlays.add(Marker(map).apply {
                             position = GeoPoint(station.latitude, station.longitude)
@@ -349,7 +533,9 @@ private fun HomeMapPreview(
                     fuelPois.forEach { poi ->
                         map.overlays.add(Marker(map).apply {
                             position = GeoPoint(poi.lat, poi.lng)
-                            icon = evCircleMarker(ctx, android.graphics.Color.rgb(255, 167, 38))
+                            icon = com.example.evfinder.ui.components.evCircleMarker(
+                                ctx, android.graphics.Color.rgb(255, 167, 38)
+                            )
                             title = "⛽ ${poi.name}"
                             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                         })
@@ -357,7 +543,9 @@ private fun HomeMapPreview(
                     lpgPois.forEach { poi ->
                         map.overlays.add(Marker(map).apply {
                             position = GeoPoint(poi.lat, poi.lng)
-                            icon = evCircleMarker(ctx, android.graphics.Color.rgb(79, 195, 247))
+                            icon = com.example.evfinder.ui.components.evCircleMarker(
+                                ctx, android.graphics.Color.rgb(79, 195, 247)
+                            )
                             title = "⛽ LPG · ${poi.name}"
                             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                         })
@@ -367,169 +555,38 @@ private fun HomeMapPreview(
             },
             modifier = Modifier.matchParentSize()
         )
-
-        Spacer(Modifier.matchParentSize().clickable(onClick = onOpenMap))
-
+        // touch-blocking tap layer: anywhere on the card opens the full map
+        Spacer(
+            Modifier
+                .matchParentSize()
+                .clickable(onClick = onOpenMap)
+        )
+        // hub count badge
         Row(
             Modifier
-                .align(Alignment.TopStart)
                 .padding(12.dp)
                 .clip(RoundedCornerShape(50))
-                .background(EvColors.Background.copy(alpha = 0.85f))
+                .background(EvColors.Background.copy(0.85f))
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             LiveDot()
             Spacer(Modifier.width(6.dp))
-            Text("${stations.size} EV · ${fuelPois.size + lpgPois.size} fuel/LPG",
-                style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurface)
+            Text("${stations.size} hubs nearby", style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurface)
         }
-
+        // location label
         Row(
             Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 12.dp)
                 .clip(RoundedCornerShape(50))
-                .background(EvColors.Primary)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .background(EvColors.Background.copy(0.85f))
+                .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(Icons.Filled.LocationOn, null, tint = EvColors.OnPrimary, modifier = Modifier.size(14.dp))
-            Text("Tap to explore map", style = MaterialTheme.typography.labelMedium,
-                color = EvColors.OnPrimary, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun UpcomingBanner(booking: BookingDto) {
-    EvCard(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        color = EvColors.Primary.copy(alpha = 0.1f)
-    ) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("NEXT BOOKING", style = MaterialTheme.typography.labelSmall,
-                    color = EvColors.Primary, letterSpacing = 0.8.sp)
-                Spacer(Modifier.weight(1f))
-                StatusPill(
-                    label = if (booking.status == "CONFIRMED") "Confirmed" else "Pending",
-                    isActive = true
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(booking.stationName, style = MaterialTheme.typography.titleMedium,
-                color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
-            Text(
-                "${booking.startTime.take(10)} · ${booking.startTime.substring(11, 16)}–${booking.endTime.substring(11, 16)}",
-                style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar
-            )
-        }
-    }
-}
-
-@Composable
-private fun RatingRow(rating: Double, count: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (count == 0) {
-            Text("Not rated yet", style = MaterialTheme.typography.labelSmall,
-                color = EvColors.OnSurfaceVar)
-        } else {
-            Text("★", color = EvColors.Primary, style = MaterialTheme.typography.labelMedium)
-            Spacer(Modifier.width(4.dp))
-            Text(
-                rating.toBigDecimal().stripTrailingZeros().toPlainString(),
-                style = MaterialTheme.typography.labelMedium,
-                color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.width(6.dp))
-            Text("($count)", style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
-        }
-    }
-}
-
-@Composable
-private fun StationResultCard(station: StationDto, onClick: () -> Unit) {
-    val available = station.services.count { it.availableSlots > 0 }
-    val cheapest = station.services.minOfOrNull { it.pricePerUnit }
-
-    EvCard(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-        onClick = onClick,
-        color = EvColors.Surface
-    ) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(station.name, style = MaterialTheme.typography.titleMedium,
-                        color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    station.address?.let {
-                        Spacer(Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.LocationOn, null, tint = EvColors.OnSurfaceVar,
-                                modifier = Modifier.size(12.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(it, style = MaterialTheme.typography.bodySmall,
-                                color = EvColors.OnSurfaceVar, maxLines = 1)
-                        }
-                    }
-                    // rating drives the ranking, so surface it on the card
-                    Spacer(Modifier.height(6.dp))
-                    RatingRow(station.averageRating, station.reviewCount)
-                }
-                StatusPill(
-                    label = if (station.status == "ACTIVE") "Open" else station.status.lowercase().replace('_', ' '),
-                    isActive = station.status == "ACTIVE"
-                )
-            }
-
-            // 3-column spec bento (mockup: kW / connector / open stalls)
-            val topPower = station.services.mapNotNull { it.powerKw }.maxOrNull()
-            val connectors = station.services.mapNotNull { it.connectorType }.distinct()
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                EvSpecTile(
-                    icon = Icons.Filled.Bolt,
-                    value = topPower?.let { "${it.toInt()} kW" }
-                        ?: (if (station.services.any { it.serviceType == "BATTERY_SWAP" }) "Swap" else "—"),
-                    caption = if (topPower != null) "Max output" else "Service",
-                    modifier = Modifier.weight(1f)
-                )
-                EvSpecTile(
-                    icon = Icons.Filled.Cable,
-                    value = connectors.firstOrNull()
-                        ?: (if (station.services.any { it.serviceType == "BATTERY_SWAP" }) "Pod" else "—"),
-                    caption = "Connector",
-                    accent = EvColors.Secondary,
-                    modifier = Modifier.weight(1f)
-                )
-                EvSpecTile(
-                    icon = Icons.Filled.Bolt,
-                    value = "${station.services.count { it.availableSlots > 0 }}/${station.services.size}",
-                    caption = "Open now",
-                    accent = if (available > 0) EvColors.Primary else EvColors.Error,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    if (available > 0) "$available service${if (available == 1) "" else "s"} available"
-                    else "All services busy",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (available > 0) EvColors.Primary else EvColors.Error
-                )
-                Spacer(Modifier.weight(1f))
-                cheapest?.let {
-                    Text(
-                        "from ৳${it.toBigDecimal().stripTrailingZeros().toPlainString()}",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
+            Icon(Icons.Filled.LocationOn, null, tint = EvColors.Primary, modifier = Modifier.size(14.dp))
+            Text("Tap to explore map", style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurface)
         }
     }
 }
