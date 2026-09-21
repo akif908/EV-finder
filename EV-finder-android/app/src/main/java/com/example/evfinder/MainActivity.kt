@@ -37,6 +37,9 @@ import com.example.evfinder.feature.booking.PaymentScreen
 import com.example.evfinder.feature.fuel.FuelStationDetailScreen
 import com.example.evfinder.feature.home.HomeScreen
 import com.example.evfinder.feature.map.MapScreen
+import com.example.evfinder.feature.news.AdminNewsScreen
+import com.example.evfinder.feature.news.NewsDetailScreen
+import com.example.evfinder.feature.news.NewsListScreen
 import com.example.evfinder.feature.operator.OperatorApp
 import com.example.evfinder.feature.profile.ProfileScreen
 import com.example.evfinder.feature.station.StationDetailScreen
@@ -165,6 +168,8 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                         navController.navigate("fuelStation/$fuelStationId")
                     },
                     onOpenMap = { navController.navigate("map") },
+                    onNewsClick = { newsId -> navController.navigate("news/$newsId") },
+                    onViewAllNews = { navController.navigate("news") },
                     onSessionExpired = {
                         tokenStore.clear()
                         navController.navigate("login") { popUpTo(0) { inclusive = true } }
@@ -200,10 +205,13 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
             }
             // Profile tab
             composable("profile") {
-                ProfileScreen(onLogout = {
-                    tokenStore.clear()
-                    navController.navigate("login") { popUpTo(0) { inclusive = true } }
-                })
+                ProfileScreen(
+                    onLogout = {
+                        tokenStore.clear()
+                        navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                    },
+                    onOpenAdminNews = { navController.navigate("adminNews") }
+                )
             }
             // Vehicles tab (full CRUD)
             composable("vehicles") {
@@ -277,6 +285,32 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                             popUpTo("home") { inclusive = true }
                             launchSingleTop = true
                         }
+                    }
+                )
+            }
+
+            // ---- Energy & fuel news (nation-wide feed, no bottom bar) ----
+            composable("news") {
+                NewsListScreen(
+                    onBack = { navController.popBackStack() },
+                    onNewsClick = { newsId -> navController.navigate("news/$newsId") }
+                )
+            }
+            composable("news/{newsId}") { entry ->
+                val newsId = entry.arguments?.getString("newsId") ?: return@composable
+                NewsDetailScreen(
+                    newsId = newsId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // ---- Admin: news management (role enforced by the backend) ----
+            composable("adminNews") {
+                AdminNewsScreen(
+                    onBack = { navController.popBackStack() },
+                    onSessionExpired = {
+                        tokenStore.clear()
+                        navController.navigate("login") { popUpTo(0) { inclusive = true } }
                     }
                 )
             }

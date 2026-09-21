@@ -2,6 +2,7 @@ package com.example.EV_finder_api.config;
 
 import com.example.EV_finder_api.entity.*;
 import com.example.EV_finder_api.repository.FuelStationRepository;
+import com.example.EV_finder_api.repository.NewsRepository;
 import com.example.EV_finder_api.repository.StationRepository;
 import com.example.EV_finder_api.repository.StationReviewRepository;
 import com.example.EV_finder_api.repository.UserRepository;
@@ -28,15 +29,18 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final StationRepository stationRepository;
     private final StationReviewRepository reviewRepository;
     private final FuelStationRepository fuelStationRepository;
+    private final NewsRepository newsRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(UserRepository userRepository, StationRepository stationRepository,
                           StationReviewRepository reviewRepository,
-                          FuelStationRepository fuelStationRepository, PasswordEncoder passwordEncoder) {
+                          FuelStationRepository fuelStationRepository,
+                          NewsRepository newsRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.stationRepository = stationRepository;
         this.reviewRepository = reviewRepository;
         this.fuelStationRepository = fuelStationRepository;
+        this.newsRepository = newsRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -84,6 +88,166 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         seedReviews();
         seedFuelStations(operator);
+        seedNews();
+    }
+
+    /**
+     * Energy & fuel news feed (nation-wide, same for every user). Seeded with
+     * publishedAt relative to startup so relative labels ("2 hours ago",
+     * "Yesterday") demo correctly. Article text is local demo content, but
+     * fuel-price articles embed {DIESEL}/{PETROL}/{OCTANE}/{LPG} tokens that
+     * NewsServiceImpl renders from the fuel-station inventory on every read,
+     * so operator price updates appear without editing the article. Demo text
+     * is re-synced on startup (see seedNewsItem); publish state is left alone.
+     */
+    private void seedNews() {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+        seedNewsItem("CNG Supply Disruption Reported",
+                "Dhaka's several areas may experience gas pressure issues today.",
+                "Titas Gas Transmission and Distribution Company has reported a supply disruption affecting " +
+                        "several areas of Dhaka. Households and CNG filling stations in Mirpur, Uttara and parts " +
+                        "of Dhanmondi may experience low gas pressure throughout the day. Officials expect normal " +
+                        "service to resume by evening as pipeline maintenance completes. CNG vehicle owners are " +
+                        "advised to top up early and expect longer queues at operating stations.",
+                NewsCategory.GAS_CNG, "The Daily Star",
+                null, null,
+                now.minusHours(2), true);
+
+        seedNewsItem("Fuel Price Update",
+                "Latest update on diesel, petrol, octane and LPG prices.",
+                "Current fuel prices have been updated. Diesel is currently ৳{DIESEL}/L, Petrol ৳{PETROL}/L and " +
+                        "Octane ৳{OCTANE}/L.\n\n" +
+                        "Current fuel prices at a glance:\n" +
+                        "- Diesel: ৳{DIESEL}/L\n" +
+                        "- Petrol: ৳{PETROL}/L\n" +
+                        "- Octane: ৳{OCTANE}/L\n" +
+                        "- LPG (auto-gas): ৳{LPG}/L\n\n" +
+                        "These rates come straight from EV Finder partner fuel stations. Whenever an operator " +
+                        "updates a pump price in the Fuel Station management system, this article refreshes " +
+                        "automatically — the values above always show the latest prices stored in the database. " +
+                        "Energy analysts note the steady rates follow softening global crude prices, and transport " +
+                        "operators welcomed the stability ahead of the harvest season.",
+                NewsCategory.FUEL_PRICE, "Bangladesh Energy Regulatory Commission",
+                null, null,
+                now.minusHours(5), true);
+
+        seedNewsItem("Fuel Price Adjustment Expected at Month-End Review",
+                "Diesel now sells at ৳{DIESEL}/L at partner pumps; the month-end review may revise rates.",
+                "The Bangladesh Energy Regulatory Commission is expected to conclude its month-end price review " +
+                        "this week. At partner filling stations on EV Finder, diesel is currently ৳{DIESEL} per " +
+                        "litre, petrol ৳{PETROL} and octane ৳{OCTANE}, while auto-LPG sells at ৳{LPG} per litre. " +
+                        "Operators have been asked to keep pumps calibrated ahead of any adjustment, and transport " +
+                        "owners' associations said they will review fares once the new rates are published. The " +
+                        "prices in this article update automatically as operators revise them in the app.",
+                NewsCategory.FUEL_PRICE, "Bangladesh Energy Regulatory Commission",
+                null, null,
+                now.minusHours(10), true);
+
+        seedNewsItem("EV Charging Update",
+                "New charging stations and EV infrastructure updates.",
+                "Two new fast-charging hubs are opening this month — a 150 kW CCS2 station on Airport Road and a " +
+                        "community 22 kW charging point in Mirpur. With these additions Dhaka's public charging " +
+                        "network crosses forty locations. The utilities division confirmed grid connections have " +
+                        "been completed and both hubs will operate 8am–11pm daily.",
+                NewsCategory.EV_CHARGING, "EV Finder Desk",
+                null, null,
+                now.minusHours(26), true);
+
+        seedNewsItem("Battery-Swap Network Expands for Three-Wheelers",
+                "Easy bike operators get five new swap points along the Gazipur corridor.",
+                "Battery-swap operator network has added five new swap points along the Gazipur–Dhaka corridor, " +
+                        "cutting turnaround for easy-bike drivers to under three minutes. Each point carries eight " +
+                        "charged lead-acid packs. Drivers report daily range anxiety dropping noticeably since the " +
+                        "corridor went live last week.",
+                NewsCategory.TRANSPORT_ENERGY, "Dhaka Tribune",
+                null, null,
+                now.minusDays(2), true);
+
+        seedNewsItem("CNG Stations in Narayanganj to Close for Annual Maintenance",
+                "A dozen CNG refuelling points will shut for two days next week for pipeline checks.",
+                "Titas Gas has announced annual maintenance shutdowns for around a dozen CNG refuelling stations " +
+                        "across Narayanganj next week. The two-day closure is part of a pipeline safety audit " +
+                        "programme. CNG-run vehicle owners are advised to refuel in advance or use alternate " +
+                        "stations along the Dhaka–Chattogram highway, where supply will remain normal. Station " +
+                        "operators will post queue updates in the EV Finder app during the shutdown.",
+                NewsCategory.GAS_CNG, "New Age Bangladesh",
+                null, null,
+                now.minusDays(2).minusHours(6), true);
+
+        seedNewsItem("Government Announces Solar Rooftop Incentive",
+                "New net-metering rebate targets factories and charging stations.",
+                "The power division announced a net-metering rebate for commercial rooftops, including EV charging " +
+                        "stations. Facilities installing at least 20 kW of solar can export surplus generation at a " +
+                        "preferential rate for the next five years. Officials expect the incentive to speed up " +
+                        "solar-powered charging hubs in industrial zones.",
+                NewsCategory.GOVERNMENT, "UNB",
+                null, null,
+                now.minusDays(3), true);
+
+        seedNewsItem("Night Tariff Discount for EV Charging Announced",
+                "Off-peak charging from 11pm to 6am will cost 15% less at public stations.",
+                "The power division has approved a night-tariff discount for public EV charging: charging between " +
+                        "11pm and 6am will cost 15% less than daytime rates. The measure aims to spread grid load " +
+                        "and make overnight charging cheaper for ride-share and delivery fleets. Charging point " +
+                        "operators will update station pricing in the EV Finder app over the coming weeks, and EV " +
+                        "owners will be able to compare day and night rates station by station.",
+                NewsCategory.EV_CHARGING, "EV Finder Desk",
+                null, null,
+                now.minusDays(4), true);
+
+        seedNewsItem("LPG Cylinder Price Steady for Winter Season",
+                "Import costs absorbed to keep household cylinders unchanged.",
+                "LPG marketing companies confirmed cylinder prices will hold through the winter season despite " +
+                        "higher import costs. A 12 kg cylinder stays at the current retail rate, and auto-LPG at " +
+                        "the pump currently sells for ৳{LPG} per litre at EV Finder partner stations (live value). " +
+                        "Consumer groups cautiously welcomed the assurance.",
+                NewsCategory.GAS_CNG, "New Age Bangladesh",
+                null, null,
+                now.minusDays(5), true);
+
+        // one unpublished draft so the admin screen has something to manage
+        seedNewsItem("Draft: EV Import Tax Revision Under Review",
+                "NBR weighs duty cut on completely knocked-down EV kits.",
+                "The National Board of Revenue is reviewing a proposal to reduce import duty on completely " +
+                        "knocked-down (CKD) electric vehicle kits. A decision is expected after the next budget " +
+                        "session; local assemblers have lobbied for the cut to narrow the price gap with " +
+                        "combustion vehicles.",
+                NewsCategory.GOVERNMENT, "EV Finder Desk",
+                null, null,
+                now.plusDays(1), false);
+    }
+
+    /**
+     * Creates a demo article, or re-syncs its demo text if an older build
+     * already seeded it (keeps price-token content and URL removals current).
+     * Publish state and schedule are user data and are left untouched.
+     */
+    private void seedNewsItem(String title, String shortDescription, String content,
+                              NewsCategory category, String source, String sourceUrl,
+                              String imageUrl, java.time.LocalDateTime publishedAt, boolean isPublished) {
+        News existing = newsRepository.findByTitle(title).orElse(null);
+        if (existing == null) {
+            newsRepository.save(News.builder()
+                    .title(title)
+                    .shortDescription(shortDescription)
+                    .content(content)
+                    .category(category)
+                    .source(source)
+                    .sourceUrl(sourceUrl)
+                    .imageUrl(imageUrl)
+                    .publishedAt(publishedAt)
+                    .isPublished(isPublished)
+                    .build());
+            return;
+        }
+        existing.setShortDescription(shortDescription);
+        existing.setContent(content);
+        existing.setCategory(category);
+        existing.setSource(source);
+        existing.setSourceUrl(sourceUrl);
+        existing.setImageUrl(imageUrl);
+        newsRepository.save(existing);
     }
 
     /** Separate fuel-station module: LPG/Diesel/Octane/Petrol with queue, stock (liters), BDT price. */

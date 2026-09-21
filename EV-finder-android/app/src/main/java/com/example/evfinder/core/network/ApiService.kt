@@ -155,4 +155,26 @@ interface ApiService {
     // ---- Operator: bookings at owned stations ----
     @GET("api/operator/bookings")
     suspend fun operatorBookings(): Response<List<BookingDto>>
+
+    // ---- Energy & fuel news (nation-wide feed; admin manages content) ----
+    @GET("api/news")
+    suspend fun getNews(
+        @Query("category") category: String? = null,
+        @Query("includeUnpublished") includeUnpublished: Boolean = false
+    ): Response<List<NewsDto>>
+
+    @GET("api/news/{id}")
+    suspend fun getNewsItem(@Path("id") id: String): Response<NewsDto>
+
+    @POST("api/news")
+    suspend fun createNews(@Body body: NewsRequestDto): Response<NewsDto>
+
+    @PUT("api/news/{id}")
+    suspend fun updateNews(@Path("id") id: String, @Body body: NewsRequestDto): Response<NewsDto>
+
+    @PUT("api/news/{id}/publish")
+    suspend fun setNewsPublished(@Path("id") id: String, @Query("published") published: Boolean): Response<NewsDto>
+
+    @DELETE("api/news/{id}")
+    suspend fun deleteNews(@Path("id") id: String): Response<Unit>
 }

@@ -14,6 +14,7 @@ Keep this file so the dbdiagram.io source (and the exported PNG) can be updated 
 | 8 | `payments` | Add `transaction_ref`, `created_at` | Proper backend payment record for the simulated gateway (context §15) |
 | 9 | `reviews` | Add `created_at`; `CHECK (rating BETWEEN 1 AND 5)` | Context §19: backend validates ratings |
 | 10 | all FKs | Explicit `ON DELETE` behavior + FK indexes | Referential integrity and query performance (context §21) |
+| 11 | *(new table)* | **Add `news`** (id, title, short_description, content, category enum, source, source_url, image_url, published_at, is_published, created_at, updated_at) + index `(is_published, published_at)` | Bangladesh energy & fuel news feed; nation-wide (no location), drafts admin-only |
 
 Unchanged (already correct in the PNG): 7-table entity set; `booking → payment` 1:1 via unique FK; `reviews.booking_id` unique (one review per booking); role/service-type/status enums; `registration_no` and `email` unique; string UUID-style PKs (keep consistent — every FK referencing them is also VARCHAR(36)).
 
@@ -100,5 +101,19 @@ Table notifications {
   type enum
   is_read boolean
   created_at timestamp
+}
+Table news {
+  news_id varchar [pk]
+  title varchar
+  short_description varchar
+  content text
+  category enum
+  source varchar
+  source_url varchar
+  image_url varchar
+  published_at timestamp
+  is_published boolean
+  created_at timestamp
+  updated_at timestamp
 }
 ```

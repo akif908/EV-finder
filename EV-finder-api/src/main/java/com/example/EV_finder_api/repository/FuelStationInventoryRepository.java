@@ -9,4 +9,11 @@ import java.util.Optional;
 public interface FuelStationInventoryRepository extends JpaRepository<FuelStationInventory, String> {
 
     Optional<FuelStationInventory> findByStationIdAndFuelType(String stationId, FuelType fuelType);
+
+    /**
+     * Latest updated inventory row for a fuel type across all stations — used by
+     * the news feed to render the current pump price ({DIESEL}, {PETROL}, …
+     * tokens in demo articles) without duplicating fuel-price data anywhere.
+     */
+    Optional<FuelStationInventory> findFirstByFuelTypeOrderByUpdatedAtDesc(FuelType fuelType);
 }

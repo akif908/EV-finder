@@ -35,6 +35,7 @@ import com.example.evfinder.core.model.ServiceDto
 import com.example.evfinder.core.model.StationDto
 import com.example.evfinder.feature.fuel.FuelRepository
 import com.example.evfinder.feature.fuel.FuelStationCard
+import com.example.evfinder.feature.news.NewsCard
 import com.example.evfinder.ui.components.*
 import com.example.evfinder.ui.theme.EvColors
 import kotlinx.coroutines.delay
@@ -52,6 +53,8 @@ fun HomeScreen(
     onStationClick: (String) -> Unit,
     onFuelStationClick: (String) -> Unit,
     onOpenMap: () -> Unit,
+    onNewsClick: (String) -> Unit,
+    onViewAllNews: () -> Unit,
     onSessionExpired: () -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
@@ -381,6 +384,78 @@ fun HomeScreen(
                         station = fs,
                         onClick = { onFuelStationClick(fs.id) },
                         modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            }
+        }
+
+        // ── 📰 Energy & Fuel News (Bangladesh-wide, same for every user) ───
+        item {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "📰 Energy & Fuel News",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = EvColors.OnBackground,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                if (state.newsLoading) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = EvColors.Primary)
+                }
+            }
+        }
+        when {
+            state.newsError != null -> item {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "News unavailable right now",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = EvColors.OnSurfaceVar,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = viewModel::retryNews) {
+                        Text("Retry", color = EvColors.Primary)
+                    }
+                }
+            }
+
+            else -> items(state.news, key = { "news-${it.id}" }) { news ->
+                NewsCard(
+                    news = news,
+                    onClick = { onNewsClick(news.id) },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+        if (state.news.isNotEmpty()) {
+            item {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(EvColors.SurfaceHigh)
+                        .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(12.dp))
+                        .clickable(onClick = onViewAllNews)
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "View All News →",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = EvColors.Primary,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }

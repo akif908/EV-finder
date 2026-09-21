@@ -226,3 +226,24 @@ CREATE TABLE notifications (
   CONSTRAINT fk_notifications_user FOREIGN KEY (user_id)
     REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- NEWS  (Bangladesh energy & fuel news feed — nation-wide,
+-- same items for every user; drafts visible to admins only)
+-- ------------------------------------------------------------
+CREATE TABLE news (
+  news_id           VARCHAR(36)  NOT NULL,
+  title             VARCHAR(150) NOT NULL,
+  short_description VARCHAR(300) NOT NULL,      -- card summary on Home / list
+  content           TEXT         NOT NULL,      -- full article body
+  category          ENUM('GAS_CNG','FUEL_PRICE','EV_CHARGING','TRANSPORT_ENERGY','GOVERNMENT') NOT NULL,
+  source            VARCHAR(120) NULL,          -- e.g. "The Daily Star"
+  source_url        VARCHAR(500) NULL,          -- "Read Original Source" target
+  image_url         VARCHAR(500) NULL,
+  published_at      TIMESTAMP    NOT NULL,      -- admin-set publication date
+  is_published      BOOLEAN      NOT NULL DEFAULT FALSE,
+  created_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (news_id),
+  KEY idx_news_published (is_published, published_at)
+) ENGINE=InnoDB;

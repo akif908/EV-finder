@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ElectricCar
 import androidx.compose.material.icons.filled.Info
@@ -46,6 +48,7 @@ import com.example.evfinder.ui.theme.EvColors
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit,
+    onOpenAdminNews: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -113,6 +116,14 @@ fun ProfileScreen(
         // ---- settings rows (placeholders where the backend feature lands later) ----
         EvCard(Modifier.padding(horizontal = 16.dp)) {
             Column {
+                if (state.role == "ADMIN") {
+                    MenuRow(
+                        Icons.Filled.Article, "News Management",
+                        "Publish energy & fuel news",
+                        onClick = onOpenAdminNews
+                    )
+                    HorizontalDivider(color = EvColors.SurfaceBorder)
+                }
                 MenuRow(Icons.Filled.CalendarMonth, "My Bookings", "View booking history")
                 HorizontalDivider(color = EvColors.SurfaceBorder)
                 MenuRow(Icons.Filled.ElectricCar, "Vehicles", "Manage your EVs")
@@ -150,9 +161,17 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String) {
+private fun MenuRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: (() -> Unit)? = null
+) {
     Row(
-        Modifier.fillMaxWidth().padding(16.dp),
+        Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(22.dp))

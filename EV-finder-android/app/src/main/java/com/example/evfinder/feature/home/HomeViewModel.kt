@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.evfinder.EvFinderApp
 import com.example.evfinder.core.model.BookingDto
+import com.example.evfinder.core.model.NewsDto
 import com.example.evfinder.core.model.StationDto
 import com.example.evfinder.core.network.AvailabilitySocket
 import com.example.evfinder.core.network.OverpassClient
 import com.example.evfinder.feature.booking.BookingRepository
+import com.example.evfinder.feature.news.NewsRepository
 import com.example.evfinder.feature.station.StationRepository
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,13 +29,18 @@ data class HomeUiState(
     val liveUpdates: Boolean = false,
     val liveTick: Int = 0,
     // real-world fuel/LPG POIs (OpenStreetMap) for the map preview
-    val pois: List<OverpassClient.Poi> = emptyList()
+    val pois: List<OverpassClient.Poi> = emptyList(),
+    // energy & fuel news (nation-wide feed, bottom section of the dashboard)
+    val news: List<NewsDto> = emptyList(),
+    val newsLoading: Boolean = false,
+    val newsError: String? = null
 )
 
 class HomeViewModel : ViewModel() {
 
     private val stationRepository = StationRepository()
     private val bookingRepository = BookingRepository()
+    private val newsRepository = NewsRepository()
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
@@ -44,6 +51,7 @@ class HomeViewModel : ViewModel() {
         loadDashboard()
         loadStations()
         loadPois()
+        loadNews()
 
         // debounced search
         viewModelScope.launch {
@@ -79,6 +87,11 @@ class HomeViewModel : ViewModel() {
         loadDashboard(silent = true)
     }
 
+    /** Retry only the news section (a failed feed never blocks the dashboard). */
+    fun retryNews() {
+        loadNews()
+    }
+
     private fun loadDashboard(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) _uiState.value = _uiState.value.copy(loading = true)
@@ -107,6 +120,24 @@ class HomeViewModel : ViewModel() {
             // fixed metro bbox (south, west, north, east)
             val pois = OverpassClient.fuelAndLpg(23.68, 90.32, 23.90, 90.48)
             _uiState.value = _uiState.value.copy(pois = pois)
+        }
+    }
+
+    /**
+     * Energy & fuel news for the dashboard section — nation-wide feed,
+     * never blocks or breaks the station list when it fails.
+     */
+    private fun loadNews() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(newsLoading = true, newsError = null)
+            newsRepository.getNews().fold(
+                onSuccess = { news ->
+                    _uiState.value = _uiState.value.copy(newsLoading = false, news = news.take(3))
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(newsLoading = false, newsError = e.message)
+                }
+            )
         }
     }
 
