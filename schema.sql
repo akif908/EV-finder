@@ -205,3 +205,44 @@ CREATE TABLE fuel_station_inventories (
   CONSTRAINT fk_fuel_inventories_station FOREIGN KEY (fuel_station_id)
     REFERENCES fuel_stations(fuel_station_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- ISSUE REPORTS  (user -> admin bug / station problem reports)
+-- ------------------------------------------------------------
+CREATE TABLE issues (
+  issue_id        VARCHAR(36)   NOT NULL,
+  user_id         VARCHAR(36)   NOT NULL,          -- reporter
+  station_id      VARCHAR(36)   NULL,              -- optional context
+  category        VARCHAR(60)   NOT NULL,
+  subject         VARCHAR(150)  NOT NULL,
+  description     VARCHAR(2000) NOT NULL,
+  status          ENUM('OPEN','IN_PROGRESS','RESOLVED','REJECTED') NOT NULL DEFAULT 'OPEN',
+  resolution_note VARCHAR(2000) NULL,              -- admin reply, shown to the reporter
+  created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved_at     TIMESTAMP     NULL,
+  PRIMARY KEY (issue_id),
+  KEY idx_issues_user (user_id),
+  KEY idx_issues_status (status),
+  CONSTRAINT fk_issues_user FOREIGN KEY (user_id)
+    REFERENCES users(user_id) ON DELETE CASCADE,
+  CONSTRAINT fk_issues_station FOREIGN KEY (station_id)
+    REFERENCES stations(station_id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- NEWS ARTICLES  (cached energy / fuel / EV headlines for the
+-- user-side "Energy & fuel updates" section)
+-- ------------------------------------------------------------
+CREATE TABLE news_articles (
+  news_id      VARCHAR(36)  NOT NULL,
+  title        VARCHAR(400) NOT NULL,
+  link         VARCHAR(600) NOT NULL,             -- also the de-duplication key
+  source       VARCHAR(150) NULL,                 -- e.g. "The Daily Star"
+  category     VARCHAR(20)  NOT NULL,             -- EV | FUEL | LPG | POLICY
+  summary      VARCHAR(500) NULL,
+  published_at TIMESTAMP    NULL,
+  fetched_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (news_id),
+  UNIQUE KEY uq_news_link (link),
+  KEY idx_news_category_published (category, published_at)
+) ENGINE=InnoDB;
