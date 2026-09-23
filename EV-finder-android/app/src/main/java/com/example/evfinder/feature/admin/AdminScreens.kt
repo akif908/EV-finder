@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.EvStation
 import androidx.compose.material.icons.filled.People
@@ -35,6 +36,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,11 +56,29 @@ import com.example.evfinder.ui.components.StatusPill
 import com.example.evfinder.ui.theme.EvColors
 
 @Composable
-fun AdminDashboardScreen(onSessionExpired: () -> Unit) {
+fun AdminDashboardScreen(
+    onSessionExpired: () -> Unit,
+    onOpenNotifications: () -> Unit = {}
+) {
     val vm: AdminDashboardViewModel = viewModel()
     val state by vm.uiState.collectAsState()
+    val unreadCount by com.example.evfinder.feature.notifications.UnreadNotifications.count
+        .collectAsState()
     Column(Modifier.fillMaxSize().background(EvColors.Background)) {
-        EvTopBar(title = "Command Center", subtitle = "Platform overview")
+        // Bell lives in the header so pending issue reports are visible the
+        // moment an admin opens the app.
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.weight(1f)) {
+                EvTopBar(title = "Command Center", subtitle = "Platform overview")
+            }
+            com.example.evfinder.ui.components.EvNotificationBell(
+                unread = unreadCount,
+                onClick = onOpenNotifications
+            )
+        }
         when {
             state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = EvColors.Primary)
@@ -267,4 +289,249 @@ private fun AdminBookingCard(booking: BookingDto, onCancel: (() -> Unit)?, cance
             }
         }
     }
+}
+
+// ─── Issue reports inbox ─────────────────────────────────────────────────────
+@Composable
+fun AdminIssuesScreen(
+    onSessionExpired: () -> Unit,
+    onOpenNotifications: () -> Unit = {}
+) {
+    val vm: AdminIssuesViewModel = viewModel()
+    val state by vm.uiState.collectAsState()
+    var replyingTo by remember { mutableStateOf<com.example.evfinder.core.model.IssueDto?>(null) }
+    val unreadCount by com.example.evfinder.feature.notifications.UnreadNotifications.count
+        .collectAsState()
+
+    val visible = state.issues.filter { state.filter == "ALL" || it.status == state.filter }
+
+    Column(Modifier.fillMaxSize().background(EvColors.Background)) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.weight(1f)) {
+                EvTopBar(title = "Issue reports", subtitle = "Bugs and problems filed by users")
+            }
+            com.example.evfinder.ui.components.EvNotificationBell(
+                unread = unreadCount,
+                onClick = onOpenNotifications
+            )
+        }
+
+        // status filter tabs
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf(
+                "OPEN" to "Open", "IN_PROGRESS" to "Working", "RESOLVED" to "Resolved",
+                "ALL" to "All"
+            ).forEach { (value, label) ->
+                val selected = state.filter == value
+                val count = state.issues.count { value == "ALL" || it.status == value }
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(if (selected) EvColors.Primary else Color.Transparent)
+                        .clickable { vm.setFilter(value) }
+                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                ) {
+                    Text(
+                        "$label $count",
+                        color = if (selected) EvColors.OnPrimary else EvColors.OnSurfaceVar,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+
+        when {
+            state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = EvColors.Primary)
+            }
+            state.error != null -> Column(
+                Modifier.fillMaxSize().padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(state.error!!, color = EvColors.Error)
+                TextButton(onClick = vm::load) { Text("Retry", color = EvColors.Primary) }
+            }
+            visible.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Filled.CheckCircle, null, tint = EvColors.Primary, modifier = Modifier.size(40.dp))
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        if (state.filter == "OPEN") "No open reports — all clear"
+                        else "Nothing in this bucket",
+                        color = EvColors.OnSurfaceVar
+                    )
+                }
+            }
+            else -> LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(visible, key = { it.id }) { issue ->
+                    AdminIssueCard(
+                        issue = issue,
+                        busy = state.updatingId == issue.id,
+                        onReply = { replyingTo = issue },
+                        onStatus = { status -> vm.update(issue.id, status, null) }
+                    )
+                }
+            }
+        }
+    }
+
+    replyingTo?.let { issue ->
+        AdminReplyDialog(
+            issue = issue,
+            onDismiss = { replyingTo = null },
+            onSend = { status, note ->
+                vm.update(issue.id, status, note)
+                replyingTo = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun AdminIssueCard(
+    issue: com.example.evfinder.core.model.IssueDto,
+    busy: Boolean,
+    onReply: () -> Unit,
+    onStatus: (String) -> Unit
+) {
+    val (label, active) = when (issue.status) {
+        "OPEN"        -> "Open" to true
+        "IN_PROGRESS" -> "In progress" to true
+        "RESOLVED"    -> "Resolved" to false
+        else          -> "Rejected" to false
+    }
+    EvCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(issue.subject, style = MaterialTheme.typography.titleSmall,
+                        color = EvColors.OnBackground, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "${issue.userName ?: "User"} · ${issue.userEmail ?: ""}",
+                        style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar
+                    )
+                }
+                StatusPill(label, isActive = active, showDot = false)
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(issue.description, style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurface)
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                listOfNotNull(
+                    issue.category,
+                    issue.stationName?.let { "at $it" },
+                    issue.createdAt?.replace('T', ' ')?.take(16)
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar
+            )
+
+            issue.resolutionNote?.let {
+                Spacer(Modifier.height(8.dp))
+                Text("Reply sent: $it", style = MaterialTheme.typography.labelSmall, color = EvColors.Primary)
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EvPrimaryButton(
+                    text = if (busy) "Saving…" else "Reply & resolve",
+                    onClick = onReply,
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f)
+                )
+                if (issue.status == "OPEN") {
+                    TextButton(onClick = { onStatus("IN_PROGRESS") }, enabled = !busy) {
+                        Text("Working on it", color = EvColors.Secondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdminReplyDialog(
+    issue: com.example.evfinder.core.model.IssueDto,
+    onDismiss: () -> Unit,
+    onSend: (status: String, note: String?) -> Unit
+) {
+    var note by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf("RESOLVED") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = EvColors.Surface,
+        title = {
+            Text("Reply to ${issue.userName ?: "user"}", color = EvColors.OnBackground,
+                fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                Text(issue.subject, style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("RESOLVED" to "Resolved", "IN_PROGRESS" to "Working", "REJECTED" to "Reject")
+                        .forEach { (value, label) ->
+                            val selected = status == value
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (selected) EvColors.Primary else EvColors.SurfaceHigh)
+                                    .clickable { status = value }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    label,
+                                    color = if (selected) EvColors.OnPrimary else EvColors.OnSurface,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                }
+                Spacer(Modifier.height(12.dp))
+                androidx.compose.material3.OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    placeholder = {
+                        Text(
+                            "What did you do? The user sees this.",
+                            color = EvColors.OnSurfaceVar.copy(alpha = 0.5f)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().height(110.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = EvColors.Primary,
+                        unfocusedBorderColor = EvColors.OutlineVariant,
+                        focusedContainerColor = EvColors.InputBackground,
+                        unfocusedContainerColor = EvColors.InputBackground,
+                        cursorColor = EvColors.Primary,
+                        focusedTextColor = EvColors.OnSurface,
+                        unfocusedTextColor = EvColors.OnSurface
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            EvPrimaryButton(
+                text = "Send reply",
+                onClick = { onSend(status, note.ifBlank { null }) },
+                enabled = note.isNotBlank()
+            )
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = EvColors.OnSurfaceVar) }
+        }
+    )
 }

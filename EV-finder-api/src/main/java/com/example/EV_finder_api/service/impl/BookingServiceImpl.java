@@ -166,14 +166,6 @@ public class BookingServiceImpl implements BookingService {
         return withAmount(booking, amountOf(booking));
     }
 
-    Booking bookingForPayment(String bookingId, String userId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found: " + bookingId));
-        if (!booking.getUser().getId().equals(userId)) {
-            throw new ForbiddenException("You can only pay for your own bookings");
-        }
-        return booking;
-    }
 
     private Booking getOwnedBooking(String bookingId) {
         Booking booking = bookingRepository.findById(bookingId)

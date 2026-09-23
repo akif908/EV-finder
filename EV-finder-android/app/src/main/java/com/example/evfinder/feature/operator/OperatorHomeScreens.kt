@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.evfinder.core.model.BookingDto
 import com.example.evfinder.ui.components.EvCard
+import com.example.evfinder.ui.components.EvNotificationBell
 import com.example.evfinder.ui.components.EvStatTile
 import com.example.evfinder.ui.components.EvPrimaryButton
 import com.example.evfinder.ui.components.EvTopBar
@@ -61,6 +62,8 @@ fun OperatorDashboardScreen(
 ) {
     val vm: OperatorDashboardViewModel = viewModel()
     val state by vm.uiState.collectAsState()
+    val unreadCount by com.example.evfinder.feature.notifications.UnreadNotifications.count
+        .collectAsState()
 
     Column(Modifier.fillMaxSize().background(EvColors.Background)) {
         when {
@@ -96,17 +99,10 @@ fun OperatorDashboardScreen(
                             }
                             LiveDot(true)
                             Spacer(Modifier.width(8.dp))
-                            Box(
-                                Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(11.dp))
-                                    .background(EvColors.Surface)
-                                    .clickable(onClick = onOpenNotifications),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Filled.Notifications, "Notifications",
-                                    tint = EvColors.OnSurface, modifier = Modifier.size(19.dp))
-                            }
+                            EvNotificationBell(
+                                unread = unreadCount,
+                                onClick = onOpenNotifications
+                            )
                         }
                     }
                     // KPI grid with progress bars (mockup: operator_dashboard_mobile)

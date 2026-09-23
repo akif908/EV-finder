@@ -37,6 +37,7 @@ class NotificationsViewModel : ViewModel() {
                         loading = false, notifications = list,
                         unread = list.count { !it.read }.toLong()
                     )
+                    UnreadNotifications.setLocal(list.count { !it.read })
                 },
                 onFailure = { e -> _uiState.value = _uiState.value.copy(loading = false, error = e.message) }
             )
@@ -54,6 +55,7 @@ class NotificationsViewModel : ViewModel() {
             _uiState.value = _uiState.value.copy(
                 unread = _uiState.value.notifications.count { !it.read }.toLong()
             )
+            UnreadNotifications.setLocal(_uiState.value.unread.toInt())
         }
     }
 
@@ -64,6 +66,7 @@ class NotificationsViewModel : ViewModel() {
                 notifications = _uiState.value.notifications.map { it.copy(read = true) },
                 unread = 0
             )
+            UnreadNotifications.setLocal(0)
         }
     }
 

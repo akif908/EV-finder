@@ -2,11 +2,13 @@ package com.example.EV_finder_api.dto;
 
 import com.example.EV_finder_api.entity.ServiceStatus;
 import com.example.EV_finder_api.entity.Station;
+import com.example.EV_finder_api.entity.StationService;
 import com.example.EV_finder_api.entity.StationStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 public record StationResponse(
         String id,
@@ -28,6 +30,15 @@ public record StationResponse(
     }
 
     public static StationResponse from(Station s, double averageRating, int reviewCount) {
+        return from(s, averageRating, reviewCount, Map.of());
+    }
+
+    /**
+     * @param activeBookingsNow serviceId → bookings whose window covers "now";
+     *                          used to derive live availability per service.
+     */
+    public static StationResponse from(Station s, double averageRating, int reviewCount,
+                                       Map<String, Long> activeBookingsNow) {
         return new StationResponse(
                 s.getId(), s.getName(), s.getDescription(), s.getAddress(),
                 s.getLatitude(), s.getLongitude(), s.getOpeningTime(), s.getClosingTime(),
@@ -36,7 +47,12 @@ public record StationResponse(
                 reviewCount,
                 s.getServices().stream()
                         .filter(sv -> sv.getStatus() == ServiceStatus.ACTIVE)
-                        .map(ServiceResponse::from)
+                        .map(sv -> ServiceResponse.from(sv, liveAvailable(sv, activeBookingsNow)))
                         .toList());
+    }
+
+    private static int liveAvailable(StationService sv, Map<String, Long> activeBookingsNow) {
+        long busy = activeBookingsNow.getOrDefault(sv.getId(), 0L);
+        return (int) Math.max(0, sv.getAvailableSlots() - busy);
     }
 }

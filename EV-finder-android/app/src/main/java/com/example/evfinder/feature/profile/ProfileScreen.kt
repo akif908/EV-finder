@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.ReportProblem
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -72,6 +74,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit,
+    onOpenReportIssue: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -200,6 +203,20 @@ fun ProfileScreen(
                             onClick = viewModel::openEdit
                         )
                     }
+                }
+
+                // ---- support section ----
+                Spacer(Modifier.height(16.dp))
+                EvSectionHeader("Support", Modifier.padding(horizontal = 16.dp),
+                    icon = Icons.Filled.SupportAgent)
+                Spacer(Modifier.height(8.dp))
+                EvCard(Modifier.padding(horizontal = 16.dp)) {
+                    EvSettingRow(
+                        Icons.Filled.ReportProblem, "Report an issue",
+                        "Send a bug or station problem to the admin team",
+                        accent = EvColors.Warning,
+                        onClick = onOpenReportIssue
+                    )
                 }
 
                 // ---- notifications section ----

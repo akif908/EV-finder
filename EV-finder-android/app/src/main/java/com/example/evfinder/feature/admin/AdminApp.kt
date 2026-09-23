@@ -15,10 +15,12 @@ import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,6 +47,7 @@ private val adminDestinations = listOf(
     AdminDestination("admin_dashboard", "Overview", Icons.Filled.AdminPanelSettings, Icons.Outlined.AdminPanelSettings),
     AdminDestination("admin_users", "Users", Icons.Filled.People, Icons.Outlined.People),
     AdminDestination("admin_bookings", "Bookings", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+    AdminDestination("admin_issues", "Reports", Icons.Filled.ReportProblem, Icons.Outlined.ReportProblem),
     AdminDestination("profile", "Profile", Icons.Filled.Person, Icons.Outlined.Person)
 )
 
@@ -54,41 +57,60 @@ fun AdminApp(onSessionExpired: () -> Unit) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
+    // Admins are notified when users file issue reports.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.example.evfinder.feature.notifications.UnreadNotifications.start(this)
+    }
+
     Scaffold(
         containerColor = EvColors.Background,
         bottomBar = {
-            Row(
-                Modifier.fillMaxWidth().background(EvColors.Background).padding(horizontal = 8.dp, vertical = 8.dp).navigationBarsPadding(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                adminDestinations.forEach { dest ->
-                    val selected = currentRoute == dest.route
-                    Column(
-                        modifier = Modifier.clip(RoundedCornerShape(12.dp))
-                            .background(if (selected) EvColors.PrimaryDim else Color.Transparent)
-                            .clickable {
-                                navController.navigate(dest.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }.padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(if (selected) dest.selectedIcon else dest.unselectedIcon, dest.label,
-                            tint = if (selected) EvColors.Primary else EvColors.OnSurfaceVar, modifier = Modifier.size(22.dp))
-                        Text(dest.label, color = if (selected) EvColors.Primary else EvColors.OnSurfaceVar,
-                            fontSize = 10.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+            com.example.evfinder.ui.components.EvBottomNavBar(
+                destinations = adminDestinations.map {
+                    com.example.evfinder.ui.components.EvNavDestination(
+                        it.route, it.label, it.selectedIcon, it.unselectedIcon)
+                },
+                selectedRoute = currentRoute,
+                onSelect = { dest ->
+                    navController.navigate(dest.route) {
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 }
-            }
+            )
         }
     ) { padding ->
         NavHost(navController, startDestination = "admin_dashboard", modifier = Modifier.padding(padding)) {
-            composable("admin_dashboard") { AdminDashboardScreen(onSessionExpired) }
+            composable("admin_dashboard") {
+                AdminDashboardScreen(
+                    onSessionExpired = onSessionExpired,
+                    onOpenNotifications = { navController.navigate("admin_notifications") }
+                )
+            }
             composable("admin_users") { AdminUsersScreen(onSessionExpired) }
             composable("admin_bookings") { AdminBookingsScreen(onSessionExpired) }
-            composable("profile") { ProfileScreen(onLogout = onSessionExpired) }
+            composable("admin_issues") {
+                AdminIssuesScreen(onSessionExpired, onOpenNotifications = {
+                    navController.navigate("admin_notifications")
+                })
+            }
+            composable("admin_notifications") {
+                com.example.evfinder.feature.notifications.NotificationsScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable("profile") {
+                ProfileScreen(
+                    onLogout = onSessionExpired,
+                    onOpenReportIssue = { navController.navigate("admin_report") }
+                )
+            }
+            composable("admin_report") {
+                com.example.evfinder.feature.support.ReportIssueScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

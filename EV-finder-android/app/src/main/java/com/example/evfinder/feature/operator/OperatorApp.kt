@@ -55,34 +55,28 @@ fun OperatorApp(onSessionExpired: () -> Unit) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
+    // Operators get a badge when a user books at one of their stations.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.example.evfinder.feature.notifications.UnreadNotifications.start(this)
+    }
+
     Scaffold(
         containerColor = EvColors.Background,
         bottomBar = {
-            Row(
-                Modifier.fillMaxWidth().background(EvColors.Background).padding(horizontal = 8.dp, vertical = 8.dp).navigationBarsPadding(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                operatorDestinations.forEach { dest ->
-                    val selected = currentRoute == dest.route
-                    Column(
-                        modifier = Modifier.clip(RoundedCornerShape(12.dp))
-                            .background(if (selected) EvColors.PrimaryDim else Color.Transparent)
-                            .clickable {
-                                navController.navigate(dest.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }.padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(if (selected) dest.selectedIcon else dest.unselectedIcon, dest.label,
-                            tint = if (selected) EvColors.Primary else EvColors.OnSurfaceVar, modifier = Modifier.size(22.dp))
-                        Text(dest.label, color = if (selected) EvColors.Primary else EvColors.OnSurfaceVar,
-                            fontSize = 10.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+            com.example.evfinder.ui.components.EvBottomNavBar(
+                destinations = operatorDestinations.map {
+                    com.example.evfinder.ui.components.EvNavDestination(
+                        it.route, it.label, it.selectedIcon, it.unselectedIcon)
+                },
+                selectedRoute = currentRoute,
+                onSelect = { dest ->
+                    navController.navigate(dest.route) {
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 }
-            }
+            )
         }
     ) { padding ->
         NavHost(navController, startDestination = "op_dashboard", modifier = Modifier.padding(padding)) {
@@ -99,7 +93,17 @@ fun OperatorApp(onSessionExpired: () -> Unit) {
             }
             composable("op_stations") { OperatorStationsScreen(onSessionExpired) }
             composable("op_bookings") { OperatorBookingsScreen(onSessionExpired) }
-            composable("profile") { ProfileScreen(onLogout = onSessionExpired) }
+            composable("profile") {
+                ProfileScreen(
+                    onLogout = onSessionExpired,
+                    onOpenReportIssue = { navController.navigate("op_report") }
+                )
+            }
+            composable("op_report") {
+                com.example.evfinder.feature.support.ReportIssueScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

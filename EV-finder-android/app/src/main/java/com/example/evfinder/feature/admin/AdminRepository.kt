@@ -41,4 +41,12 @@ class AdminRepository {
             else -> serverMessage ?: "Request failed (HTTP ${response.code()})"
         }
     }
+
+    // ---- issue reports ----
+    suspend fun issues(): Result<List<com.example.evfinder.core.model.IssueDto>> =
+        com.example.evfinder.feature.support.IssueRepository().all()
+
+    suspend fun updateIssue(id: String, status: String, note: String?):
+        Result<com.example.evfinder.core.model.IssueDto> =
+        com.example.evfinder.feature.support.IssueRepository().update(id, status, note)
 }

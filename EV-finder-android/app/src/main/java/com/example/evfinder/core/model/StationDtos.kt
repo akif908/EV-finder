@@ -24,6 +24,9 @@ data class ServiceDto(
     val connectorType: String?,
     val powerKw: Double?,
     val pricePerUnit: Double,
+    /** Slots free right now (capacity minus bookings happening now). */
     val availableSlots: Int,
+    /** Installed capacity — denominator for the availability bar. */
+    val capacitySlots: Int? = null,
     val status: String
 )

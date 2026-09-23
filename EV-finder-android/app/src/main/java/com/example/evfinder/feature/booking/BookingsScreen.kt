@@ -147,6 +147,9 @@ fun BookingsScreen(
     viewModel: BookingsViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    // Shared unread counter drives the animated bell badge
+    val unreadCount by com.example.evfinder.feature.notifications.UnreadNotifications.count
+        .collectAsState()
 
     // Every time the user lands on this tab (e.g. right after a payment) the
     // list is refreshed silently, so the booking they just made is shown.
@@ -199,15 +202,10 @@ fun BookingsScreen(
                     Text("EV FINDER", style = MaterialTheme.typography.labelSmall, color = EvColors.Primary, letterSpacing = 1.sp)
                     Text("Bookings", style = MaterialTheme.typography.titleMedium, color = EvColors.OnBackground, fontWeight = FontWeight.Bold)
                 }
-                Box(
-                    Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable(onClick = onOpenNotifications),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Outlined.Notifications, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(22.dp))
-                }
+                EvNotificationBell(
+                    unread = unreadCount,
+                    onClick = onOpenNotifications
+                )
                 Spacer(Modifier.width(12.dp))
                 Box(
                     Modifier.size(34.dp).clip(RoundedCornerShape(50)).background(EvColors.PrimaryDim),

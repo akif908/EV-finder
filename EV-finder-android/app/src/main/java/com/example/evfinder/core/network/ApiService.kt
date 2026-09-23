@@ -148,4 +148,22 @@ interface ApiService {
 
     @PUT("api/admin/bookings/{id}/cancel")
     suspend fun adminForceCancelBooking(@Path("id") id: String): Response<BookingDto>
+
+    // ---- Issue / bug reports ----
+    @POST("api/issues")
+    suspend fun createIssue(
+        @Body body: com.example.evfinder.core.model.IssueRequestDto
+    ): Response<com.example.evfinder.core.model.IssueDto>
+
+    @GET("api/issues/my")
+    suspend fun myIssues(): Response<List<com.example.evfinder.core.model.IssueDto>>
+
+    @GET("api/admin/issues")
+    suspend fun adminIssues(): Response<List<com.example.evfinder.core.model.IssueDto>>
+
+    @PUT("api/admin/issues/{id}")
+    suspend fun adminUpdateIssue(
+        @Path("id") id: String,
+        @Body body: com.example.evfinder.core.model.IssueUpdateDto
+    ): Response<com.example.evfinder.core.model.IssueDto>
 }

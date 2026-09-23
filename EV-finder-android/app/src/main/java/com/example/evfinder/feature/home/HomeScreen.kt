@@ -54,6 +54,9 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     // Pump opened from the Fuel & LPG list — shows the full detail card.
     var selectedPoi by remember { mutableStateOf<OverpassClient.Poi?>(null) }
+    // Shared unread counter drives the animated bell badge
+    val unreadCount by com.example.evfinder.feature.notifications.UnreadNotifications.count
+        .collectAsState()
 
     // Re-fetch silently every time the user lands on this tab, so the station
     // list and the upcoming-booking banner always reflect the latest state.
@@ -104,18 +107,11 @@ fun HomeScreen(
                     Icon(Icons.Outlined.Map, null, tint = EvColors.OnSurface, modifier = Modifier.size(18.dp))
                 }
                 Spacer(Modifier.width(8.dp))
-                // Notifications bell (badge count comes from the notifications tab)
-                Box(
-                    Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(EvColors.SurfaceHigh)
-                        .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(10.dp))
-                        .clickable(onClick = onOpenNotifications),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Outlined.Notifications, null, tint = EvColors.OnSurface, modifier = Modifier.size(18.dp))
-                }
+                // Notifications bell with an animated unread badge
+                EvNotificationBell(
+                    unread = unreadCount,
+                    onClick = onOpenNotifications
+                )
                 Spacer(Modifier.width(8.dp))
                 // Live badge
                 Row(
@@ -566,6 +562,10 @@ private fun FeaturedStationCard(station: StationDto, onClick: () -> Unit, modifi
     val available = station.services.count { it.availableSlots > 0 }
     val topService = station.services.maxByOrNull { it.powerKw ?: 0.0 }
     val cheapest = station.services.minOfOrNull { it.pricePerUnit }
+    // Live occupancy across every service: free slots now vs installed capacity.
+    val freeSlots = station.services.sumOf { it.availableSlots }
+    val capacity = station.services.sumOf { it.capacitySlots ?: it.availableSlots }
+    val availability = if (capacity > 0) freeSlots.toFloat() / capacity else 0f
 
     EvCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
@@ -614,6 +614,47 @@ private fun FeaturedStationCard(station: StationDto, onClick: () -> Unit, modifi
 
             Spacer(Modifier.height(12.dp))
             HorizontalDivider(color = EvColors.SurfaceBorder.copy(0.4f))
+            Spacer(Modifier.height(12.dp))
+
+            // Availability bar — how much of the station is free right now
+            Column {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "AVAILABILITY",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = EvColors.OnSurfaceVar,
+                        letterSpacing = 0.8.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    val pct = (availability * 100).toInt()
+                    Text(
+                        "$pct%",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = when {
+                            availability > 0.5f  -> EvColors.Primary
+                            availability > 0.15f -> EvColors.Warning
+                            else                 -> EvColors.Error
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                com.example.evfinder.ui.components.EvProgressBar(
+                    fraction = availability,
+                    color = when {
+                        availability > 0.5f  -> EvColors.Primary
+                        availability > 0.15f -> EvColors.Warning
+                        else                 -> EvColors.Error
+                    }
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "$freeSlots of $capacity slots free now",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = EvColors.OnSurfaceVar
+                )
+            }
+
             Spacer(Modifier.height(12.dp))
 
             // Amenities row
@@ -683,7 +724,27 @@ private fun CompactStationRow(station: StationDto, onClick: () -> Unit, modifier
             Spacer(Modifier.height(2.dp))
             val kw = station.services.firstOrNull()?.powerKw?.toInt()?.toString() ?: "?"
             Text("$kw kW  •  ${station.services.count { it.availableSlots > 0 }} slots free", style = MaterialTheme.typography.bodySmall, color = EvColors.OnSurfaceVar)
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(4.dp))
+            // Thin live-occupancy bar: percentage of capacity free right now
+            val free = station.services.sumOf { it.availableSlots }
+            val cap = station.services.sumOf { it.capacitySlots ?: it.availableSlots }
+            val frac = if (cap > 0) free.toFloat() / cap else 0f
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) {
+                    com.example.evfinder.ui.components.EvProgressBar(
+                        fraction = frac,
+                        height = 4.dp,
+                        color = when {
+                            frac > 0.5f  -> EvColors.Primary
+                            frac > 0.15f -> EvColors.Warning
+                            else         -> EvColors.Error
+                        }
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text("${(frac * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = EvColors.OnSurfaceVar)
+            }
+            Spacer(Modifier.height(4.dp))
             RatingRow(station.averageRating, station.reviewCount)
         }
         Column(horizontalAlignment = Alignment.End) {

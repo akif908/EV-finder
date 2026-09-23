@@ -38,7 +38,9 @@ fun StationDetailScreen(
     stationId: String,
     onBack: () -> Unit,
     onBookService: (stationId: String, serviceId: String) -> Unit,
-    onGetDirections: (latitude: Double, longitude: Double, name: String) -> Unit
+    onGetDirections: (latitude: Double, longitude: Double, name: String) -> Unit,
+    /** Opens the report-a-problem form with this station attached. */
+    onReportIssue: (stationId: String, stationName: String) -> Unit = { _, _ -> }
 ) {
     var station by remember { mutableStateOf<StationDto?>(null) }
     var reviews by remember { mutableStateOf<StationReviewsDto?>(null) }
@@ -91,7 +93,9 @@ fun StationDetailScreen(
             }
         }
 
-        station != null -> StationDetailContent(station!!, reviews, onBack, onBookService, onGetDirections)
+        station != null -> StationDetailContent(
+            station!!, reviews, onBack, onBookService, onGetDirections, onReportIssue
+        )
     }
 }
 
@@ -138,7 +142,8 @@ private fun StationDetailContent(
     reviews: StationReviewsDto?,
     onBack: () -> Unit,
     onBookService: (String, String) -> Unit,
-    onGetDirections: (latitude: Double, longitude: Double, name: String) -> Unit
+    onGetDirections: (latitude: Double, longitude: Double, name: String) -> Unit,
+    onReportIssue: (String, String) -> Unit
 ) {
     LazyColumn(
         Modifier
@@ -289,6 +294,45 @@ private fun StationDetailContent(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // Live availability bar: percentage of capacity free right now
+                    val cap = service.capacitySlots ?: service.availableSlots
+                    val frac = if (cap > 0) service.availableSlots.toFloat() / cap else 0f
+                    val pct = (frac * 100).toInt()
+                    val barColor = when {
+                        frac > 0.5f  -> EvColors.Primary
+                        frac > 0.15f -> EvColors.Warning
+                        else         -> EvColors.Error
+                    }
+                    Column {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                if (service.serviceType == "BATTERY_SWAP") "CHARGED BATTERIES READY"
+                                else "CHARGE POINTS FREE",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = EvColors.OnSurfaceVar,
+                                letterSpacing = 0.8.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                "$pct%",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = barColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        com.example.evfinder.ui.components.EvProgressBar(fraction = frac, color = barColor)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "${service.availableSlots} of $cap " +
+                                (if (service.serviceType == "BATTERY_SWAP") "swap bays free now" else "charge points free now"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = EvColors.OnSurfaceVar
+                        )
                     }
 
                     Spacer(Modifier.height(14.dp))
@@ -494,6 +538,13 @@ private fun StationDetailContent(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Filled.Navigation
+                )
+                Spacer(Modifier.height(10.dp))
+                // Report a problem with this specific station — goes to the admins
+                EvOutlinedButton(
+                    text = "Report a problem here",
+                    onClick = { onReportIssue(station.id, station.name) },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

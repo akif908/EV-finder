@@ -2,9 +2,13 @@ package com.example.EV_finder_api.controller;
 
 import com.example.EV_finder_api.dto.AdminUserResponse;
 import com.example.EV_finder_api.dto.BookingResponse;
+import com.example.EV_finder_api.dto.IssueResponse;
+import com.example.EV_finder_api.dto.IssueUpdateRequest;
 import com.example.EV_finder_api.dto.PlatformOverview;
 import com.example.EV_finder_api.entity.Role;
 import com.example.EV_finder_api.service.AdminService;
+import com.example.EV_finder_api.service.impl.IssueServiceImpl;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +22,11 @@ import java.util.List;
 public class AdminController {
 
     private final AdminService adminService;
+    private final IssueServiceImpl issueService;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(AdminService adminService, IssueServiceImpl issueService) {
         this.adminService = adminService;
+        this.issueService = issueService;
     }
 
     @GetMapping("/overview")
@@ -52,5 +58,18 @@ public class AdminController {
     @PutMapping("/bookings/{id}/cancel")
     public BookingResponse forceCancel(@PathVariable String id) {
         return adminService.forceCancelBooking(id);
+    }
+
+    // ---- user-filed issue reports ----
+
+    @GetMapping("/issues")
+    public List<IssueResponse> issues() {
+        return issueService.all();
+    }
+
+    @PutMapping("/issues/{id}")
+    public IssueResponse updateIssue(@PathVariable String id,
+                                     @Valid @RequestBody IssueUpdateRequest request) {
+        return issueService.updateStatus(id, request);
     }
 }

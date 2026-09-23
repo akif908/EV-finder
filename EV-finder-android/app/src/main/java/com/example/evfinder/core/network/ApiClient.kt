@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
 
     // TODO: if your PC's IP changes (new Wi-Fi), update HOST_IP.
-    private const val HOST_IP = "192.168.0.105"
+    private const val HOST_IP = "192.168.0.103"
 
     const val WS_URL = "ws://$HOST_IP:8080/ws"
     private const val BASE_URL = "http://$HOST_IP:8080"

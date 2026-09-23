@@ -121,3 +121,48 @@ class AdminBookingsViewModel : ViewModel() {
         }
     }
 }
+
+// ─── Issue reports inbox ─────────────────────────────────────────────────────
+data class AdminIssuesUiState(
+    val loading: Boolean = true,
+    val issues: List<com.example.evfinder.core.model.IssueDto> = emptyList(),
+    val filter: String = "OPEN",
+    val error: String? = null,
+    val updatingId: String? = null
+)
+
+class AdminIssuesViewModel : ViewModel() {
+    private val repository = AdminRepository()
+    private val _uiState = MutableStateFlow(AdminIssuesUiState())
+    val uiState: StateFlow<AdminIssuesUiState> = _uiState
+
+    init { load() }
+
+    fun load() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(loading = true, error = null)
+            repository.issues().fold(
+                onSuccess = { list -> _uiState.value = _uiState.value.copy(loading = false, issues = list) },
+                onFailure = { e -> _uiState.value = _uiState.value.copy(loading = false, error = e.message) }
+            )
+        }
+    }
+
+    fun setFilter(filter: String) { _uiState.value = _uiState.value.copy(filter = filter) }
+
+    /** Moves a report along and, optionally, sends the reporter a reply. */
+    fun update(id: String, status: String, note: String?) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(updatingId = id, error = null)
+            repository.updateIssue(id, status, note).fold(
+                onSuccess = { updated ->
+                    _uiState.value = _uiState.value.copy(
+                        updatingId = null,
+                        issues = _uiState.value.issues.map { if (it.id == updated.id) updated else it }
+                    )
+                },
+                onFailure = { e -> _uiState.value = _uiState.value.copy(updatingId = null, error = e.message) }
+            )
+        }
+    }
+}

@@ -50,6 +50,10 @@ public class Notification {
 
     public enum NotificationType {
         BOOKING_CONFIRMED, BOOKING_CANCELLED, PAYMENT_FAILED,
-        NEW_BOOKING, NEW_REVIEW, GENERAL
+        NEW_BOOKING, NEW_REVIEW, GENERAL,
+        /** A user filed a bug / issue report — goes to the admins. */
+        NEW_ISSUE,
+        /** An admin resolved the user's issue report. */
+        ISSUE_RESOLVED
     }
 }

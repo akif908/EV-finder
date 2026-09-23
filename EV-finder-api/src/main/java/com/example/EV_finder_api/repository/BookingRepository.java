@@ -32,6 +32,21 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
                                 @Param("start") LocalDateTime start,
                                 @Param("end") LocalDateTime end);
 
+    /**
+     * Live occupancy: one row [serviceId, activeBookingsHappeningNow] for every
+     * service that currently has at least one PENDING/CONFIRMED booking whose
+     * window covers the given instant. Powers the station cards' availability
+     * bar without N+1 queries.
+     */
+    @Query("""
+           SELECT b.service.id, COUNT(b) FROM Booking b
+           WHERE b.status IN ('PENDING', 'CONFIRMED')
+             AND b.startTime < :now
+             AND b.endTime > :now
+           GROUP BY b.service.id
+           """)
+    List<Object[]> countActiveNowGrouped(@Param("now") LocalDateTime now);
+
     List<Booking> findByServiceIdAndStatusInAndStartTimeBetween(String serviceId,
                                                                 List<com.example.EV_finder_api.entity.BookingStatus> statuses,
                                                                 LocalDateTime start,
