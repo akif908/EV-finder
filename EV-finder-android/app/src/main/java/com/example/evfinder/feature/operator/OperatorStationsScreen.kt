@@ -236,7 +236,8 @@ private fun ActionChip(label: String, icon: androidx.compose.ui.graphics.vector.
 }
 
 @Composable
-private fun LocationPickerOverlay(onConfirm: (Double, Double) -> Unit, onCancel: () -> Unit) {
+// Shared with the fuel station module (feature.fuel).
+fun LocationPickerOverlay(onConfirm: (Double, Double) -> Unit, onCancel: () -> Unit) {
     var picked by remember { mutableStateOf<GeoPoint?>(null) }
     val markerRef = remember { arrayOfNulls<Marker>(1) }
     Box(Modifier.fillMaxSize().background(EvColors.Background)) {

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -32,8 +33,12 @@ import com.example.evfinder.core.model.BookingDto
 import com.example.evfinder.core.model.ServiceDto
 import com.example.evfinder.core.model.StationDto
 import com.example.evfinder.core.network.OverpassClient
+import com.example.evfinder.feature.fuel.FuelStationCard
+import com.example.evfinder.feature.fuel.fuelLabel
 import com.example.evfinder.ui.components.*
 import com.example.evfinder.ui.theme.EvColors
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -49,6 +54,11 @@ fun HomeScreen(
     onOpenNotifications: () -> Unit,
     onSessionExpired: () -> Unit,
     onGetDirections: (lat: Double, lng: Double, name: String) -> Unit = { _, _, _ -> },
+    /** Opens the fuel-station detail screen (informational, no booking). */
+    onFuelStationClick: (String) -> Unit = {},
+    /** Opens a news headline in the browser. */
+    onOpenArticle: (String) -> Unit = {},
+    onSeeAllNews: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -57,6 +67,38 @@ fun HomeScreen(
     // Shared unread counter drives the animated bell badge
     val unreadCount by com.example.evfinder.feature.notifications.UnreadNotifications.count
         .collectAsState()
+
+    // ── Fuel station module (separate from EV stations, no booking) ───────
+    var fuelMode by remember { mutableStateOf(false) }
+    var fuelQuery by remember { mutableStateOf("") }
+    var fuelFilter by remember { mutableStateOf<String?>(null) }   // LPG/DIESEL/OCTANE/PETROL
+    var fuelAvailableOnly by remember { mutableStateOf(false) }
+    var fuelStations by remember { mutableStateOf<List<com.example.evfinder.core.model.FuelStationDto>?>(null) }
+    var fuelLoading by remember { mutableStateOf(false) }
+    var fuelError by remember { mutableStateOf<String?>(null) }
+    val fuelScope = rememberCoroutineScope()
+
+    fun loadFuelStations() {
+        fuelScope.launch {
+            fuelLoading = true
+            fuelError = null
+            com.example.evfinder.feature.fuel.FuelRepository().getFuelStations(
+                query = fuelQuery.takeIf { it.isNotBlank() },
+                fuel = fuelFilter,
+                availableOnly = fuelAvailableOnly
+            ).fold(
+                onSuccess = { fuelStations = it; fuelLoading = false },
+                onFailure = { fuelError = it.message; fuelLoading = false }
+            )
+        }
+    }
+
+    LaunchedEffect(fuelMode, fuelQuery, fuelFilter, fuelAvailableOnly) {
+        if (fuelMode) {
+            delay(250) // small debounce while typing
+            loadFuelStations()
+        }
+    }
 
     // Re-fetch silently every time the user lands on this tab, so the station
     // list and the upcoming-booking banner always reflect the latest state.
@@ -148,14 +190,133 @@ fun HomeScreen(
                 Icon(Icons.Outlined.Search, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 BasicSearchField(
-                    value = state.query,
-                    onValueChange = viewModel::onQueryChanged,
-                    placeholder = "Search station, area or city",
+                    value = if (fuelMode) fuelQuery else state.query,
+                    onValueChange = {
+                        if (fuelMode) fuelQuery = it else viewModel.onQueryChanged(it)
+                    },
+                    placeholder = if (fuelMode) "Search fuel station or area" else "Search station, area or city",
                     modifier = Modifier.weight(1f)
                 )
                 Icon(Icons.Outlined.MyLocation, null, tint = EvColors.Primary, modifier = Modifier.size(20.dp))
             }
         }
+
+        // ── Category toggle: EV charging vs fuel stations (branch feature) ──
+        item {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(EvColors.SurfaceHigh)
+                    .border(1.dp, EvColors.SurfaceBorder, RoundedCornerShape(12.dp))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                StationCategoryPill(
+                    "EV Charging", Icons.Filled.EvStation, !fuelMode, Modifier.weight(1f)
+                ) { fuelMode = false }
+                StationCategoryPill(
+                    "Fuel Station", Icons.Filled.LocalGasStation, fuelMode, Modifier.weight(1f)
+                ) { fuelMode = true }
+            }
+        }
+
+        if (fuelMode) {
+            // ── Fuel station mode: queue / stock / price — no booking ──────
+            item {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.LocalGasStation, null,
+                        tint = EvColors.Warning, modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Fuel Stations",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = EvColors.OnBackground,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (fuelLoading) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = EvColors.Primary)
+                    } else if (fuelStations != null) {
+                        Text(
+                            "${fuelStations!!.size} found",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = EvColors.OnSurfaceVar
+                        )
+                    }
+                }
+            }
+
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item { EvFilterChip("All", fuelFilter == null, { fuelFilter = null }) }
+                    listOf("LPG", "DIESEL", "OCTANE", "PETROL").forEach { type ->
+                        item {
+                            EvFilterChip(
+                                fuelLabel(type), fuelFilter == type, { fuelFilter = type }
+                            )
+                        }
+                    }
+                    item {
+                        EvFilterChip(
+                            "In stock only", fuelAvailableOnly, { fuelAvailableOnly = !fuelAvailableOnly }
+                        )
+                    }
+                }
+            }
+
+            when {
+                fuelError != null -> item {
+                    Column(
+                        Modifier.fillMaxWidth().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Filled.WifiOff, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(40.dp))
+                        Spacer(Modifier.height(12.dp))
+                        Text(fuelError!!, color = EvColors.Error, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(12.dp))
+                        if (fuelError!!.startsWith("Session expired")) {
+                            EvPrimaryButton("Log in again", onClick = onSessionExpired, modifier = Modifier.fillMaxWidth(0.6f))
+                        } else {
+                            TextButton(onClick = { loadFuelStations() }) { Text("Retry", color = EvColors.Primary) }
+                        }
+                    }
+                }
+
+                fuelStations != null && fuelStations!!.isEmpty() && !fuelLoading -> item {
+                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Filled.SearchOff, null, tint = EvColors.OnSurfaceVar, modifier = Modifier.size(40.dp))
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                if (fuelQuery.isBlank()) "No fuel stations yet"
+                                else "No fuel stations match \"$fuelQuery\"",
+                                color = EvColors.OnSurfaceVar
+                            )
+                        }
+                    }
+                }
+
+                else -> items(fuelStations ?: emptyList(), key = { it.id }) { fs ->
+                    FuelStationCard(
+                        station = fs,
+                        onClick = { onFuelStationClick(fs.id) },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
+                    )
+                }
+            }
+        } else {
 
         // ── Filter chips + live map preview (EV / Fuel / LPG layers) ───────
         item {
@@ -354,6 +515,16 @@ fun HomeScreen(
                 }
             }
         }
+        }  // end EV mode
+
+        // ── Latest energy / fuel / EV news (real headlines) ────────────────
+        item {
+            Spacer(Modifier.height(16.dp))
+            com.example.evfinder.feature.news.EnergyUpdatesSection(
+                onOpenArticle = onOpenArticle,
+                onSeeAll = onSeeAllNews
+            )
+        }
     }
 
     // ── Pump detail card ──────────────────────────────────────────────────
@@ -363,6 +534,39 @@ fun HomeScreen(
             onClose = { selectedPoi = null },
             onGetDirections = { onGetDirections(poi.lat, poi.lng, poi.name) },
             onShowOnMap = onOpenMap
+        )
+    }
+}
+
+// ─── Station category toggle (EV charging / fuel stations) ───────────────────
+@Composable
+private fun StationCategoryPill(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(9.dp))
+            .background(if (selected) EvColors.Primary else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon, null,
+            tint = if (selected) EvColors.OnPrimary else EvColors.OnSurfaceVar,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            color = if (selected) EvColors.OnPrimary else EvColors.OnSurfaceVar,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
         )
     }
 }

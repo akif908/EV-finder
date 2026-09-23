@@ -5,25 +5,29 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * A fuel (LPG/Diesel/Octane/Petrol) filling station.
+ * Completely separate from the EV {@link Station} — no booking concept exists here;
+ * users only see live queue/stock/price info maintained by the operator.
+ */
 @Entity
-@Table(name = "stations")
+@Table(name = "fuel_stations")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Station {
+public class FuelStation {
 
     @Id
-    @Column(name = "station_id", length = 36)
+    @Column(name = "fuel_station_id", length = 36)
     private String id;
 
-    /** Ownership: an operator may only manage their own stations. */
+    /** Ownership: an operator may only manage their own fuel stations. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "operator_id", nullable = false)
     private User operator;
@@ -43,25 +47,14 @@ public class Station {
     @Column(nullable = false, precision = 11, scale = 7)
     private BigDecimal longitude;
 
-    @Column(name = "opening_time")
-    private LocalTime openingTime;
-
-    @Column(name = "closing_time")
-    private LocalTime closingTime;
-
-    /** Remaining energy reserve at the station, as a percentage (0-100). */
-    @Column(name = "fuel_level")
+    /** Closed stations stay visible to users but show a "Closed" status. */
+    @Column(name = "is_open", nullable = false)
     @Builder.Default
-    private Integer fuelLevel = 100;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private StationStatus status = StationStatus.ACTIVE;
+    private Boolean isOpen = true;
 
     @OneToMany(mappedBy = "station", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<StationService> services = new ArrayList<>();
+    private List<FuelStationInventory> inventories = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -20,6 +20,8 @@ public record StationResponse(
         LocalTime openingTime,
         LocalTime closingTime,
         StationStatus status,
+        /** Remaining energy reserve at the station, 0-100 (%). */
+        Integer fuelLevel,
         /** Aggregated review score (0 when never rated) — used to rank stations. */
         double averageRating,
         int reviewCount,
@@ -43,6 +45,7 @@ public record StationResponse(
                 s.getId(), s.getName(), s.getDescription(), s.getAddress(),
                 s.getLatitude(), s.getLongitude(), s.getOpeningTime(), s.getClosingTime(),
                 s.getStatus(),
+                s.getFuelLevel(),
                 Math.round(averageRating * 10) / 10.0,
                 reviewCount,
                 s.getServices().stream()

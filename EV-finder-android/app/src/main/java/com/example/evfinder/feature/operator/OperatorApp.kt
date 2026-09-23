@@ -14,10 +14,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EvStation
+import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SpaceDashboard
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.EvStation
+import androidx.compose.material.icons.outlined.LocalGasStation
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.SpaceDashboard
 import androidx.compose.material3.Icon
@@ -46,6 +48,7 @@ private val operatorDestinations = listOf(
     OperatorDestination("op_dashboard", "Dashboard", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
     OperatorDestination("op_stations", "Stations", Icons.Filled.EvStation, Icons.Outlined.EvStation),
     OperatorDestination("op_bookings", "Bookings", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+    OperatorDestination("op_fuel", "Fuel", Icons.Filled.LocalGasStation, Icons.Outlined.LocalGasStation),
     OperatorDestination("profile", "Profile", Icons.Filled.Person, Icons.Outlined.Person)
 )
 
@@ -93,6 +96,9 @@ fun OperatorApp(onSessionExpired: () -> Unit) {
             }
             composable("op_stations") { OperatorStationsScreen(onSessionExpired) }
             composable("op_bookings") { OperatorBookingsScreen(onSessionExpired) }
+            composable("op_fuel") {
+                com.example.evfinder.feature.fuel.OperatorFuelStationsScreen(onSessionExpired)
+            }
             composable("profile") {
                 ProfileScreen(
                     onLogout = onSessionExpired,

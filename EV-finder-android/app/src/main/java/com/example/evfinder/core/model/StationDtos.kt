@@ -14,6 +14,8 @@ data class StationDto(
     /** Aggregated review score (0 when never rated) — stations rank by this. */
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0,
+    /** Remaining energy reserve at the station, 0–100 (%) — from the branch. */
+    val fuelLevel: Int = 100,
     val services: List<ServiceDto> = emptyList()
 )
 

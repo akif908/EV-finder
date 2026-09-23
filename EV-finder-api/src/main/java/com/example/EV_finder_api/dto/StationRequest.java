@@ -13,10 +13,13 @@ public record StationRequest(
         @NotNull @DecimalMin("-90") @DecimalMax("90") BigDecimal latitude,
         @NotNull @DecimalMin("-180") @DecimalMax("180") BigDecimal longitude,
         LocalTime openingTime,
-        LocalTime closingTime
+        LocalTime closingTime,
+        /** Remaining energy reserve 0-100 (%); optional, defaults to 100. */
+        @Min(0) @Max(100) Integer fuelLevel
 ) {
     public static StationRequest fromEntity(Station s) {
         return new StationRequest(s.getName(), s.getDescription(), s.getAddress(),
-                s.getLatitude(), s.getLongitude(), s.getOpeningTime(), s.getClosingTime());
+                s.getLatitude(), s.getLongitude(), s.getOpeningTime(), s.getClosingTime(),
+                s.getFuelLevel());
     }
 }

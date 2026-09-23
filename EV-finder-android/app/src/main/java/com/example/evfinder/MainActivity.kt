@@ -178,7 +178,10 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
                         tokenStore.clear()
                         navController.navigate("login") { popUpTo(0) { inclusive = true } }
                     },
-                    onGetDirections = { lat, lng, name -> openDirections(context, lat, lng, name) }
+                    onGetDirections = { lat, lng, name -> openDirections(context, lat, lng, name) },
+                    onFuelStationClick = { id -> navController.navigate("fuel/$id") },
+                    onOpenArticle = { url -> openUrl(context, url) },
+                    onSeeAllNews = { navController.navigate("news") }
                 )
             }
             composable("map") {
@@ -213,9 +216,25 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
             composable("notifications") {
                 NotificationsScreen(onBack = { navController.popBackStack() })
             }
+            composable("news") {
+                val newsContext = LocalContext.current
+                com.example.evfinder.feature.news.NewsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenArticle = { url -> openUrl(newsContext, url) }
+                )
+            }
             composable("report") {
                 com.example.evfinder.feature.support.ReportIssueScreen(
                     onBack = { navController.popBackStack() }
+                )
+            }
+            composable("fuel/{fuelStationId}") { entry ->
+                val fuelStationId = entry.arguments?.getString("fuelStationId") ?: return@composable
+                val context = LocalContext.current
+                com.example.evfinder.feature.fuel.FuelStationDetailScreen(
+                    fuelStationId = fuelStationId,
+                    onBack = { navController.popBackStack() },
+                    onGetDirections = { lat, lng, name -> openDirections(context, lat, lng, name) }
                 )
             }
             composable("report/{stationId}/{stationName}") { entry ->
@@ -283,8 +302,18 @@ fun EVFinderApp(startDestination: String, tokenStore: TokenStore) {
     }
 }
 
-private fun openDirections(context: android.content.Context, lat: Double, lng: Double, name: String) {
-    // Google Maps turn-by-turn if installed, else any geo app
+/** Opens a news article (or any web link) in the user's browser. */
+private fun openUrl(context: android.content.Context, url: String) {
+    try {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } catch (_: Exception) {
+        // no browser available — nothing sensible to do
+    }
+}
+
+private fun openDirections(context: android.content.Context, lat: Double, lng: Double, name: String) {    // Google Maps turn-by-turn if installed, else any geo app
     val gmm = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=$lat,$lng"))
         .setPackage("com.google.android.apps.maps")
     try {
