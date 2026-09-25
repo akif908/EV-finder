@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Figure: Test results summary.
+  Bar chart of the requests executed per folder (Postman collection) with the
+  assertion totals, and a pass/fail breakdown by HTTP status class.
+  Numbers come from docs/validate_collection.js and docs/run-api-tests.sh.
+  Convert to PNG for the report:  rsvg-convert -o figure-results.png figure-results.svg
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="720"
+     viewBox="0 0 900 720" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="900" height="720" fill="#ffffff"/>
+
+  <text x="450" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="#111">
+    Test Results — EV Finder REST API
+  </text>
+  <text x="450" y="62" text-anchor="middle" font-size="13" fill="#555">
+    All executed against the Spring Boot backend with MySQL running
+  </text>
+
+  <!-- ================= headline summary ================= -->
+  <rect x="40" y="84" width="200" height="86" rx="10" fill="#eef7f0" stroke="#2f7d4f" stroke-width="2"/>
+  <text x="140" y="122" text-anchor="middle" font-size="30" font-weight="bold" fill="#2f7d4f">50</text>
+  <text x="140" y="146" text-anchor="middle" font-size="12" fill="#33604a">curl suite cases</text>
+  <text x="140" y="162" text-anchor="middle" font-size="12" font-weight="bold" fill="#2f7d4f">50 passed · 0 failed</text>
+
+  <rect x="260" y="84" width="200" height="86" rx="10" fill="#eaf0fb" stroke="#2f5b9e" stroke-width="2"/>
+  <text x="360" y="122" text-anchor="middle" font-size="30" font-weight="bold" fill="#2f5b9e">47</text>
+  <text x="360" y="146" text-anchor="middle" font-size="12" fill="#33507d">Postman requests</text>
+  <text x="360" y="162" text-anchor="middle" font-size="12" font-weight="bold" fill="#2f5b9e">9 folders</text>
+
+  <rect x="480" y="84" width="200" height="86" rx="10" fill="#fdf3e7" stroke="#a9701c" stroke-width="2"/>
+  <text x="580" y="122" text-anchor="middle" font-size="30" font-weight="bold" fill="#a9701c">59</text>
+  <text x="580" y="146" text-anchor="middle" font-size="12" fill="#8a5d1d">assertions</text>
+  <text x="580" y="162" text-anchor="middle" font-size="12" font-weight="bold" fill="#a9701c">59 passed · 0 failed</text>
+
+  <rect x="700" y="84" width="160" height="86" rx="10" fill="#eaeaea" stroke="#555" stroke-width="2"/>
+  <text x="780" y="122" text-anchor="middle" font-size="30" font-weight="bold" fill="#333">0</text>
+  <text x="780" y="146" text-anchor="middle" font-size="12" fill="#444">failures</text>
+  <text x="780" y="162" text-anchor="middle" font-size="12" font-weight="bold" fill="#2f7d4f">100% pass</text>
+
+  <!-- ================= bar chart ================= -->
+  <text x="40" y="214" font-size="14" font-weight="bold" fill="#222">
+    Requests executed per collection folder (all passed)
+  </text>
+
+  <!-- axis -->
+  <line x1="330" y1="232" x2="330" y2="560" stroke="#bbb" stroke-width="1"/>
+  <line x1="330" y1="560" x2="860" y2="560" stroke="#bbb" stroke-width="1"/>
+  <text x="345" y="578" font-size="11" fill="#777">0</text>
+  <text x="423" y="578" font-size="11" fill="#777">2</text>
+  <text x="501" y="578" font-size="11" fill="#777">4</text>
+  <text x="579" y="578" font-size="11" fill="#777">6</text>
+  <text x="657" y="578" font-size="11" fill="#777">8</text>
+  <text x="735" y="578" font-size="11" fill="#777">10</text>
+  <text x="813" y="578" font-size="11" fill="#777">12</text>
+
+  <!-- 39 px per unit -->
+  <g font-size="12" fill="#222">
+    <text x="320" y="256" text-anchor="end">1. Auth</text>
+    <rect x="330" y="242" width="195" height="20" rx="3" fill="#2f7d4f"/>
+    <text x="535" y="257" font-size="11.5" fill="#2f7d4f" font-weight="bold">5</text>
+
+    <text x="320" y="290" text-anchor="end">2. Setup</text>
+    <rect x="330" y="276" width="117" height="20" rx="3" fill="#2f7d4f"/>
+    <text x="457" y="291" font-size="11.5" fill="#2f7d4f" font-weight="bold">3</text>
+
+    <text x="320" y="324" text-anchor="end">3. Vehicles</text>
+    <rect x="330" y="310" width="195" height="20" rx="3" fill="#2f7d4f"/>
+    <text x="535" y="325" font-size="11.5" fill="#2f7d4f" font-weight="bold">5</text>
+
+    <text x="320" y="358" text-anchor="end">4. Stations</text>
+    <rect x="330" y="344" width="195" height="20" rx="3" fill="#2f7d4f"/>
+    <text x="535" y="359" font-size="11.5" fill="#2f7d4f" font-weight="bold">5</text>
+
+    <text x="320" y="392" text-anchor="end">5. Bookings</text>
+    <rect x="330" y="378" width="429" height="20" rx="3" fill="#2f5b9e"/>
+    <text x="769" y="393" font-size="11.5" fill="#2f5b9e" font-weight="bold">11</text>
+
+    <text x="320" y="426" text-anchor="end">6. Payment</text>
+    <rect x="330" y="412" width="195" height="20" rx="3" fill="#2f7d4f"/>
+    <text x="535" y="427" font-size="11.5" fill="#2f7d4f" font-weight="bold">5</text>
+
+    <text x="320" y="460" text-anchor="end">7. Security</text>
+    <rect x="330" y="446" width="195" height="20" rx="3" fill="#2f7d4f"/>
+    <text x="535" y="461" font-size="11.5" fill="#2f7d4f" font-weight="bold">5</text>
+
+    <text x="320" y="494" text-anchor="end">8. Reviews / news</text>
+    <rect x="330" y="480" width="273" height="20" rx="3" fill="#2f7d4f"/>
+    <text x="613" y="495" font-size="11.5" fill="#2f7d4f" font-weight="bold">7</text>
+
+    <text x="320" y="528" text-anchor="end">9. Teardown</text>
+    <rect x="330" y="514" width="39" height="20" rx="3" fill="#7b8b9a"/>
+    <text x="379" y="529" font-size="11.5" fill="#54636f" font-weight="bold">1</text>
+  </g>
+  <text x="330" y="600" font-size="11" fill="#777">
+    Blue = the folder covering the booking conflict rule · Green = all requests passed
+  </text>
+
+  <!-- ================= status-code coverage ================= -->
+  <text x="40" y="648" font-size="14" font-weight="bold" fill="#222">
+    HTTP status codes exercised (success paths and failure paths)
+  </text>
+  <g font-size="12" font-weight="bold">
+    <rect x="40"  y="662" width="104" height="26" rx="5" fill="#eef7f0" stroke="#2f7d4f"/>
+    <text x="92"  y="680" text-anchor="middle" fill="#2f7d4f">200 OK</text>
+
+    <rect x="154" y="662" width="104" height="26" rx="5" fill="#eef7f0" stroke="#2f7d4f"/>
+    <text x="206" y="680" text-anchor="middle" fill="#2f7d4f">201 Created</text>
+
+    <rect x="268" y="662" width="118" height="26" rx="5" fill="#eef7f0" stroke="#2f7d4f"/>
+    <text x="327" y="680" text-anchor="middle" fill="#2f7d4f">204 No Content</text>
+
+    <rect x="396" y="662" width="118" height="26" rx="5" fill="#fdf3e7" stroke="#a9701c"/>
+    <text x="455" y="680" text-anchor="middle" fill="#a9701c">400 Bad Req.</text>
+
+    <rect x="524" y="662" width="112" height="26" rx="5" fill="#fdf3e7" stroke="#a9701c"/>
+    <text x="580" y="680" text-anchor="middle" fill="#a9701c">401 Unauth.</text>
+
+    <rect x="646" y="662" width="104" height="26" rx="5" fill="#fdf3e7" stroke="#a9701c"/>
+    <text x="698" y="680" text-anchor="middle" fill="#a9701c">403 Forbidden</text>
+
+    <rect x="760" y="662" width="104" height="26" rx="5" fill="#fdf3e7" stroke="#a9701c"/>
+    <text x="812" y="680" text-anchor="middle" fill="#a9701c">404 Not Found</text>
+
+    <rect x="40"  y="694" width="112" height="26" rx="5" fill="#fdecec" stroke="#a12b2b"/>
+    <text x="96"  y="712" text-anchor="middle" fill="#a12b2b">409 Conflict</text>
+    <text x="164" y="712" font-size="11.5" font-weight="normal" fill="#666">
+      the double-booking guard, and the vehicle-with-history delete guard
+    </text>
+  </g>
+</svg>

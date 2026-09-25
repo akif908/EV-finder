@@ -17,21 +17,26 @@ CSE 2118: Advanced Object-Oriented Programming
 | **Date of Submission** | *[FILL IN]* |
 | **GitHub Repository Link** | https://github.com/akif908/EV-finder |
 
+> **Before submitting:** fill the four fields above and paste an image into every empty
+> **FIGURE** box. The figure checklist is in Section 8.3.
+
 ---
 
 ## Abstract
 
-Electric-vehicle adoption in Bangladesh is limited by range anxiety: drivers cannot tell whether a
-charger is free, and battery-swap points, petrol pumps and LPG stations publish no live status.
-This project implements an EV charging and battery-swap finder as a Spring Boot REST API backed by
-MySQL, with a native Android client. The API manages users, vehicles, stations, bookable services,
-bookings, simulated payments, reviews, notifications, issue reports and a fuel-inventory module
-across three roles — USER, OPERATOR and ADMIN — secured with JSON Web Tokens and BCrypt password
-hashing. Booking conflicts are prevented by counting active overlapping bookings against a
-service's installed capacity inside a single transaction, and availability changes are pushed to
-clients over a WebSocket. The API exposes 54 endpoints across 16 controllers and was validated with
-a 50-case acceptance suite covering success *and* failure paths, in which all 50 cases returned the
-expected HTTP status.
+Electric-vehicle adoption is limited by range anxiety: drivers cannot tell whether a charger is
+free, and battery-swap points, petrol pumps and LPG stations publish no live status. This project
+implements an EV charging and battery-swap finder as a Spring Boot REST API backed by MySQL, with a
+native Android client. The API manages users, vehicles, stations, bookable services, bookings,
+simulated payments, reviews, notifications, issue reports and a fuel-inventory module across three
+roles — USER, OPERATOR and ADMIN — secured with JSON Web Tokens and BCrypt password hashing.
+Booking conflicts are prevented by counting active overlapping bookings against a service's
+installed capacity inside a single transaction, and availability changes are pushed to clients over
+a WebSocket. The API exposes 54 endpoints across 16 controllers and was verified with two
+independent suites: a 50-case command-line acceptance suite and a 47-request Postman collection
+carrying 59 assertions. Both cover success *and* failure paths, and both finished with a 100% pass
+rate. Testing also uncovered and fixed a real defect: deleting a vehicle that bookings referenced
+returned HTTP 500 instead of 409.
 
 ---
 
@@ -46,11 +51,12 @@ nearby pump has run out of octane or that a queue of eight vehicles is waiting.
 
 A backend for this problem must do more than store records. It has to:
 
-- model *capacity* — a station has several charge points, each usable by only one vehicle at a time;
-- refuse a reservation that would exceed that capacity, even when two users click at the same instant;
-- keep availability information fresh for every client watching the station;
-- enforce who may do what, because station owners, drivers and platform administrators need different powers;
-- record a payment and a review so the platform can rank the best stations.
+- model **capacity** — a station has several charge points, each usable by only one vehicle at a time;
+- **refuse** a reservation that would exceed that capacity, even when two users click at the same instant;
+- keep availability information **fresh** for every client watching the station;
+- **enforce who may do what**, because station owners, drivers and platform administrators need
+  different powers;
+- record a **payment and a review** so the platform can rank the best stations.
 
 A **REST API** expresses this naturally: resources (stations, bookings, payments) are addressed by
 URL, manipulated with standard HTTP verbs, and represented as JSON, so any client — here an Android
@@ -59,8 +65,8 @@ server, an ORM and security with almost no configuration, its embedded Tomcat re
 steps, and dependency injection keeps the layers loosely coupled and testable.
 
 This project builds that API. It is deliberately broader than a single-resource CRUD service: the
-booking conflict rule, role-based authorisation and the simulated payment lifecycle are the parts
-that carry the real engineering weight, and they are the parts documented in depth below.
+booking conflict rule, role-based authorisation and the simulated payment lifecycle carry the real
+engineering weight, and they are the parts documented in depth below.
 
 ### 1.2 Objectives
 
@@ -74,7 +80,7 @@ that carry the real engineering weight, and they are the parts documented in dep
    that supports both a success path and a forced-failure path.
 5. **Expose** a documented REST API with correct status codes (200, 201, 204, 400, 401, 403, 404,
    409) and a consistent JSON error body.
-6. **Verify** the API with an automated acceptance suite covering both success and failure cases.
+6. **Verify** the API with automated suites that cover both success and failure cases.
 
 ### 1.3 Scope
 
@@ -104,7 +110,7 @@ that carry the real engineering weight, and they are the parts documented in dep
 
 | Category | Tool / Version | Why it was used |
 |---|---|---|
-| Language | Java 17 | LTS release; records, `var`, text blocks used throughout |
+| Language | Java 17 | LTS release; records, `var` and text blocks used throughout |
 | Framework | Spring Boot 4.1.1 | Auto-configuration, embedded Tomcat, starter dependencies |
 | Web layer | `spring-boot-starter-webmvc` | REST controllers over embedded Tomcat |
 | Persistence | Spring Data JPA / Hibernate ORM | CRUD without boilerplate SQL; derived query methods |
@@ -115,7 +121,7 @@ that carry the real engineering weight, and they are the parts documented in dep
 | Real-time | `spring-boot-starter-websocket` | Pushes availability changes to connected clients |
 | Boilerplate | Lombok | `@Getter/@Setter/@Builder` on entities |
 | Build tool | Maven (`mvnw` wrapper) | Reproducible build; wrapper pins the Maven version |
-| API testing | curl (automated suite) + Postman | 49-case suite, plus replayable requests for screenshots |
+| API testing | curl + Postman + a Node validator | Two independent suites, 50 cases and 59 assertions |
 | Front-end | Kotlin + Jetpack Compose, Retrofit, osmdroid | Native Android client; free OpenStreetMap tiles |
 | Version control | Git + GitHub | Feature branches with hand-offs between members |
 
@@ -151,7 +157,7 @@ EV-finder-api/
     │   ├── controller/   16 REST controllers
     │   ├── dto/          30 request/response records (API boundary)
     │   ├── entity/       12 entities + 10 enums
-    │   ├── exception/    6 custom exceptions + GlobalExceptionHandler
+    │   ├── exception/    7 custom exceptions + GlobalExceptionHandler
     │   ├── repository/   12 Spring Data JPA repositories
     │   ├── security/     JwtService, JwtAuthenticationFilter,
     │   │                 CustomUserDetailsService, CurrentUserProvider
@@ -167,58 +173,54 @@ The layering is strictly one-directional (`controller → service → repository
 ### How to run the project
 
 ```bash
-# 1. Start MySQL (XAMPP Control Panel → MySQL). Create the schema once:
+# 1. Start MySQL from the XAMPP Control Panel. Create the schema once:
 #    CREATE DATABASE ev_finder;
 
 # 2. Run the API
 cd EV-finder-api
 ./mvnw spring-boot:run          # Windows: mvnw.cmd spring-boot:run
 # API available on http://localhost:8080
+
+# 3. Confirm it is up (401 means the API is running and asking for a token)
+curl -i http://localhost:8080/api/stations
 ```
 
-*[SCREENSHOT — Figure 2: IntelliJ/terminal console showing the application started successfully,
-including the `Tomcat started on port 8080` and `Started EvFinderApiApplication` lines.]*
+**FIGURE 2 — Console showing the application started successfully**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|      (console output showing "Tomcat started on port 8080" and            |
+|              "Started EvFinderApiApplication in ... seconds")             |
+|                                                                           |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 2: The application starting successfully on the embedded Tomcat server.*
 
 ---
 
 ## 4. System Architecture
 
 The backend is a **layered modular monolith**. Each layer has one responsibility and talks only to
-the layer beneath it.
+the layer beneath it. Figure 1 shows the layers, the arrows between them, and the cross-cutting
+concerns that wrap every request.
+
+**FIGURE 1 — Layered architecture** *(image provided: `docs/figures/figure1-architecture.svg`)*
 
 ```
-        Client — Android app (Retrofit) or Postman
-                        │  HTTP + JSON, Bearer JWT
-                        ▼
-   ┌────────────────────────────────────────────────────┐
-   │  Controller layer — @RestController                │
-   │  Maps URLs, validates input (@Valid), sets status  │
-   │  codes, returns DTOs. No business rules.           │
-   └────────────────────────┬───────────────────────────┘
-                            │ request / response DTOs
-                            ▼
-   ┌────────────────────────────────────────────────────┐
-   │  Service layer — @Service                          │
-   │  Business rules: capacity & overlap checks,        │
-   │  ownership checks, payment lifecycle, notifications│
-   │  @Transactional boundaries live here.              │
-   └────────────────────────┬───────────────────────────┘
-                            │ entities
-                            ▼
-   ┌────────────────────────────────────────────────────┐
-   │  Repository layer — JpaRepository                  │
-   │  save, findAll, findById, deleteById + derived     │
-   │  query methods and @Query JPQL.                    │
-   └────────────────────────┬───────────────────────────┘
-                            │ JDBC via Hibernate
-                            ▼
-   ┌────────────────────────────────────────────────────┐
-   │  MySQL — 12 tables                                 │
-   └────────────────────────────────────────────────────┘
-
-   Cross-cutting: SecurityConfig + JwtAuthenticationFilter (every request),
-   GlobalExceptionHandler (every exception), AvailabilityWebSocketHandler
-   (outbound real-time), NotificationService (side effects).
++---------------------------------------------------------------------------+
+|                                                                           |
+|     INSERT Figure 1 HERE — docs/figures/figure1-architecture.svg          |
+|                                                                           |
+|     Open the SVG in a browser and copy it, or convert it to PNG:          |
+|     rsvg-convert -o figure1.png docs/figures/figure1-architecture.svg     |
+|                                                                           |
++---------------------------------------------------------------------------+
 ```
 
 *Figure 1: Layered architecture of the EV Finder API.*
@@ -273,11 +275,11 @@ Consider `POST /api/bookings` — a driver reserving a slot:
 1. **Filter chain.** `JwtAuthenticationFilter` reads the `Authorization: Bearer …` header, validates
    the signature and expiry with `JwtService`, extracts the user id (subject) and role claim, and
    places an authenticated principal in the `SecurityContext`. A request without a valid token is
-   rejected with **401** before it ever reaches a controller.
-2. **Controller.** `BookingController.create(@Valid @RequestBody BookingRequest request)` deserialises
-   the JSON into a record. Bean Validation checks the constraints (`@NotNull vehicleId`, etc.); a
-   violation throws `MethodArgumentNotValidException`, which `GlobalExceptionHandler` converts to
-   **400**. The controller delegates immediately — it contains no business rules.
+   rejected with **401** before it reaches any controller.
+2. **Controller.** `BookingController.create(@Valid @RequestBody BookingRequest request)`
+   deserialises the JSON into a record. Bean Validation checks the constraints; a violation throws
+   `MethodArgumentNotValidException`, which `GlobalExceptionHandler` converts to **400**. The
+   controller delegates immediately — it contains no business rules.
 3. **Service.** `BookingServiceImpl.create` runs inside one transaction and:
    - loads the caller from `CurrentUserProvider` (from the security context);
    - rejects a window that ends before it starts, or starts in the past (**400**);
@@ -286,8 +288,8 @@ Consider `POST /api/bookings` — a driver reserving a slot:
    - **counts overlapping active bookings** and compares against capacity → **409** if full;
    - saves the booking with status `PENDING`, broadcasts the new availability over the WebSocket,
      and notifies the station's operator.
-4. **Repository.** Hibernate issues the `INSERT` and the earlier `SELECT COUNT`, using the composite
-   index `idx_bookings_conflict`.
+4. **Repository.** Hibernate issues the `SELECT COUNT` and the `INSERT`, using the composite index
+   `idx_bookings_conflict`.
 5. **Response.** `BookingResponse.from(...)` maps the entity to a DTO — deliberately avoiding the
    lazy `user`/`vehicle` proxies — and the controller returns **201 Created** with the JSON body.
 
@@ -356,10 +358,10 @@ auto-increment numbers, the id is generated in a `@PrePersist` callback instead 
 insert commits. `@ManyToOne` with `fetch = LAZY` stores only a foreign key and defers loading the
 related row until it is actually read, which avoids pulling a user, vehicle, station and service
 graph on every query; `optional = false` makes the join column `NOT NULL`. `@Enumerated(STRING)`
-persists the enum by name (`"PENDING"`) rather than ordinal, so inserting a new constant later
+persists the enum by name (`"PENDING"`) rather than by ordinal, so inserting a new constant later
 cannot silently reinterpret existing rows. `@Builder.Default` keeps the default `PENDING` status
-when the builder is used. `@PrePersist` guarantees the id and timestamp exist on every insert, so
-no caller can forget them.
+when the builder is used. `@PrePersist` guarantees the id and timestamp exist on every insert, so no
+caller can forget them.
 
 ### 5.2 Repository
 
@@ -381,6 +383,9 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
     long countActiveOverlapping(@Param("serviceId") String serviceId,
                                 @Param("start") LocalDateTime start,
                                 @Param("end") LocalDateTime end);
+
+    /** True if any booking (of any status) references this vehicle. */
+    boolean existsByVehicleId(String vehicleId);
 }
 ```
 
@@ -392,8 +397,8 @@ parses into JPQL, for example `findByUserIdOrderByCreatedAtDesc(String userId)`,
 
 The overlap test uses **half-open intervals**: `startTime < :end AND endTime > :start`. This is the
 standard way to detect a time clash — it correctly treats 10:00–11:00 and 11:00–12:00 as *not*
-overlapping, so back-to-back bookings are allowed, while 10:30 correctly collides with both.
-Only `PENDING` and `CONFIRMED` rows count; `CANCELLED` bookings release their capacity immediately.
+overlapping, so back-to-back bookings are allowed, while 10:30 correctly collides with both. Only
+`PENDING` and `CONFIRMED` rows count; a `CANCELLED` booking releases its capacity immediately.
 
 ### 5.3 Service
 
@@ -476,10 +481,25 @@ Loading the managed entity first is what makes `save` an **UPDATE**. Had the cod
 overwritten unrelated columns), and a non-existent id would have silently created data instead of
 returning 404.
 
-**How "not found" is handled.** Services never return `null` or a boolean flag; they throw a
-domain exception (`ResourceNotFoundException`, `ForbiddenException`, `ValidationException`,
-`BookingUnavailableException`). A single `@RestControllerAdvice` translates each into the right
-status code, so no controller contains error-handling branches.
+A third example shows a guard added as a result of testing (see Section 8.4):
+
+```java
+public void delete(String vehicleId) {
+    Vehicle vehicle = getOwnedVehicle(vehicleId);
+    // Bookings reference the vehicle and the FK is ON DELETE RESTRICT, so an
+    // unguarded delete surfaced as a 500. Refuse it with a clear 409 instead.
+    if (bookingRepository.existsByVehicleId(vehicleId)) {
+        throw new ResourceInUseException(
+                "This vehicle has booking history and cannot be deleted: " + vehicle.getRegistrationNo());
+    }
+    vehicleRepository.delete(vehicle);
+}
+```
+
+**How "not found" is handled.** Services never return `null` or a boolean flag; they throw a domain
+exception (`ResourceNotFoundException`, `ForbiddenException`, `ValidationException`,
+`BookingUnavailableException`, `ResourceInUseException`). A single `@RestControllerAdvice`
+translates each into the right status code, so no controller contains error-handling branches.
 
 ### 5.4 Controller
 
@@ -528,10 +548,10 @@ public ResponseEntity<Void> delete(@PathVariable String id) {
 
 **In my own words.** `@RestController` combines `@Controller` with `@ResponseBody`, so every method's
 return value is serialised to JSON by Jackson instead of resolving a view. `@RequestMapping` on the
-class sets the base path; the method-level `@PostMapping`/`@GetMapping` complete it.
-`@PathVariable` binds `{id}` from the URL, `@RequestParam` binds query parameters such as
-`?status=CONFIRMED`, and `@RequestBody` deserialises the JSON payload into a record.
-`@Valid` triggers Bean Validation before the method body runs.
+class sets the base path; the method-level `@PostMapping`/`@GetMapping` complete it. `@PathVariable`
+binds `{id}` from the URL, `@RequestParam` binds query parameters such as `?status=CONFIRMED`, and
+`@RequestBody` deserialises the JSON payload into a record. `@Valid` triggers Bean Validation before
+the method body runs.
 
 Status codes are explicit rather than left to defaults, because returning 200 for every response is
 misleading:
@@ -545,7 +565,7 @@ misleading:
 | Missing/invalid token | `401 Unauthorized` |
 | Authenticated but not allowed | `403 Forbidden` |
 | Resource absent | `404 Not Found` |
-| Capacity exhausted / duplicate | `409 Conflict` |
+| Capacity exhausted, or resource still referenced | `409 Conflict` |
 
 Role restrictions are declared, not coded:
 
@@ -573,7 +593,7 @@ carry real weight, each chosen for a specific reason:
 | **Security filter chain** | Stateless JWT authentication and method-level authorisation. | `JwtAuthenticationFilter`, `@PreAuthorize` |
 | **WebSocket handler** | Push availability changes so clients need not poll. | `AvailabilityWebSocketHandler.broadcastAvailability(service)` |
 
-The uniform error body produced by the handler (real response captured from the running server):
+The uniform error body produced by the handler (a real response captured from the running server):
 
 ```json
 {
@@ -590,19 +610,19 @@ The uniform error body produced by the handler (real response captured from the 
 ## 6. REST API Endpoints
 
 The API exposes **54 endpoints across 16 controllers**. Every endpoint outside `/api/auth/**`
-requires `Authorization: Bearer <jwt>`. Representative endpoints are listed below; the complete list
+requires `Authorization: Bearer <jwt>`. Representative endpoints are listed below; the full list
 (including operator, admin, fuel, issue and news endpoints) is in the repository README.
 
 ### Core endpoints
 
 | Method | URL | Purpose | Request body | Success | Error |
 |---|---|---|---|---|---|
-| POST | `/api/auth/register` | Create an account | Register JSON | 201 Created | 400 Bad Request (validation) |
+| POST | `/api/auth/register` | Create an account | Register JSON | 201 Created | 400 Bad Request |
 | POST | `/api/auth/login` | Authenticate, receive JWT | Login JSON | 200 OK | 401 Unauthorized |
 | GET | `/api/users/me` | Current profile | None | 200 OK | 401 Unauthorized |
 | PUT | `/api/users/me` | Update profile | Profile JSON | 200 OK | 400 / 401 |
 | PUT | `/api/users/me/password` | Change password | Password JSON | 200 OK | 400 / 401 |
-| POST | `/api/vehicles` | Add a vehicle | Vehicle JSON | 201 Created | 400 Bad Request |
+| POST | `/api/vehicles` | Add a vehicle | Vehicle JSON | 201 Created | 400 / 409 (duplicate registration) |
 | GET | `/api/vehicles/my` | List own vehicles | None | 200 OK | 401 Unauthorized |
 | PUT | `/api/vehicles/{id}` | Update a vehicle | Vehicle JSON | 200 OK | 404 Not Found |
 | DELETE | `/api/vehicles/{id}` | Delete a vehicle | None | 204 No Content | 404 Not Found, 409 Conflict (has booking history) |
@@ -614,7 +634,7 @@ requires `Authorization: Bearer <jwt>`. Representative endpoints are listed belo
 | GET | `/api/bookings/my` | Own bookings | Query: `status` | 200 OK | 401 Unauthorized |
 | GET | `/api/bookings/{id}` | One booking | None | 200 OK | 403 Forbidden / 404 |
 | PUT | `/api/bookings/{id}/cancel` | Cancel a booking | None | 200 OK | 400 / 403 / 404 |
-| POST | `/api/payments/{bookingId}` | Pay (simulated) | Payment JSON | 200 OK | 404 Not Found |
+| POST | `/api/payments/{bookingId}` | Pay (simulated) | Payment JSON | 200 OK | 400 (already paid) / 404 |
 | POST | `/api/reviews` | Rate a finished session | Review JSON | 201 Created | 400 / 403 / 409 |
 | GET | `/api/reviews/station/{id}` | Station reviews + average | None | 200 OK | 404 Not Found |
 | GET | `/api/notifications/my` | Notification feed | None | 200 OK | 401 Unauthorized |
@@ -681,23 +701,35 @@ requires `Authorization: Bearer <jwt>`. Representative endpoints are listed belo
 }
 ```
 
+### Sample error response (409 Conflict) — vehicle still referenced
+
+```json
+{
+  "timestamp": "2026-09-25T16:37:30.2977392",
+  "status": 409,
+  "error": "Conflict",
+  "message": "This vehicle has booking history and cannot be deleted: TST-AC-001",
+  "path": "/api/vehicles/8314fc91-b5d5-44e8-af29-89ef20f4b4ad"
+}
+```
+
 ### Idempotency
 
 An operation is idempotent when repeating the identical request leaves the server in the same state
 as the first call. **PUT** is idempotent because it replaces the state of a known resource: sending
 the same body to `PUT /api/vehicles/{id}` ten times leaves one vehicle with those values, and every
 call returns 200. **POST** is not idempotent because it asks the server to *create* a subordinate
-resource with a server-assigned identity: each `POST /api/bookings` inserts a distinct row with a
-new UUID, so ten identical calls attempt ten reservations — and, once they exceed the service's
-capacity, the later ones are correctly rejected with 409 rather than silently merged. This is also
-why a payment is modelled as `POST /api/payments/{bookingId}` (a new payment event) but the booking
-lookup and cancel are `PUT`/`GET` on an identified booking.
+resource with a server-assigned identity: each `POST /api/bookings` inserts a distinct row with a new
+UUID, so ten identical calls attempt ten reservations — and once they exceed the service's capacity
+the later ones are correctly rejected with 409 rather than silently merged. This is also why a
+payment is modelled as `POST /api/payments/{bookingId}` (a new payment event) while the booking
+lookup and cancel are `GET`/`PUT` on an identified booking.
 
-One honest nuance in this API: `PUT /api/bookings/{id}/cancel` is not idempotent in practice — the
-first call returns 200 and moves the booking to CANCELLED, while a second call returns
-**400 Bad Request** because a cancelled booking is no longer cancellable (verified as TC-49). The
-state after both calls is identical, but the response differs, so the operation is best described
-as "state-idempotent but not response-idempotent".
+One honest nuance: `PUT /api/bookings/{id}/cancel` is not idempotent in practice. The first call
+returns 200 and moves the booking to CANCELLED, while a second call returns **400 Bad Request**
+because a cancelled booking is no longer cancellable (tested as TC-49). The state after both calls
+is identical, but the response differs, so it is best described as *state-idempotent but not
+response-idempotent*.
 
 ---
 
@@ -760,11 +792,26 @@ news_articles  (standalone cache, UNIQUE link)
 ```
 
 I did not add Spring Profiles or Flyway in this iteration: the project targets a single local
-database, so a profile would add indirection without benefit, and `schema.sql` plus `ddl-auto=update`
-covers the course requirement. Migrations are listed under future work in Section 10.
+database, so a profile would add indirection without benefit, and `schema.sql` plus
+`ddl-auto=update` covers the course requirement. Migrations are listed under future work in
+Section 10.
 
-*[SCREENSHOT — Figure 3: phpMyAdmin (http://localhost/phpmyadmin → database `ev_finder`) showing the
-12 tables in the left sidebar and the `bookings` table open with several saved rows.]*
+**FIGURE 3 — Database tables in phpMyAdmin**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|     (phpMyAdmin -> database "ev_finder" showing all 12 tables in the      |
+|      left sidebar, with the "bookings" table open and rows visible)       |
+|                                                                           |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 3: The MySQL schema, showing the tables and saved rows.*
 
 ---
 
@@ -772,20 +819,39 @@ covers the course requirement. Migrations are listed under future work in Sectio
 
 ### 8.1 How the tests were run
 
-Testing was automated rather than manual. `docs/run-api-tests.sh` authenticates the three demo
-accounts, resolves live ids (station, service, vehicle, fuel station, a future slot date), executes
-every case, and prints the results table below while writing the raw request/response bodies to
-`docs/test-evidence.log`:
+Testing is automated rather than manual. Two independent suites exercise the same API, so a mistake
+in one harness cannot hide a defect:
+
+| Suite | File | Scope |
+|---|---|---|
+| Command-line acceptance suite | `docs/run-api-tests.sh` | 50 cases via curl; prints a markdown results table and writes `docs/test-evidence.log` |
+| Postman collection (+ validator) | `docs/EV-Finder.postman_collection.json`, `docs/validate_collection.js` | 47 requests in 9 folders carrying 59 assertions |
 
 ```bash
+# Suite 1 — command line
 bash docs/run-api-tests.sh http://localhost:8080
+# TOTAL: 50   PASSED: 50   FAILED: 0
+
+# Suite 2 — the Postman collection, run without Postman
+node docs/validate_collection.js http://localhost:8080
+# assertions: 59   passed: 59   failed: 0
 ```
 
-For screenshots, `docs/EV-Finder.postman_collection.json` contains the same requests with assertions;
-import it, run the three logins plus `2. Setup` once, and every remaining request authenticates and
-resolves its ids automatically.
+Inside Postman the collection is run with the **Collection Runner** (hover the collection → `⋯` →
+*Run collection*), keeping the folder order and Iterations = 1. For the report screenshots the
+individual requests are sent one at a time, because a screenshot must show the request body as well
+as the status code.
 
-### 8.2 Results — 49 cases, all passing
+`docs/validate_collection.js` was written specifically because a defect in the collection's own
+scripts (Section 8.4, finding 5) was invisible to a syntax check: it stubs the Postman `pm` API and
+*executes* every script against the live backend, so a runtime error surfaces as a failure instead of
+a confusing 404 three requests later.
+
+### 8.2 Results
+
+Both suites finished with no failures.
+
+**Suite 1 — 50 cases, 50 passed, 0 failed**
 
 | TC | Method | Endpoint | Expected | Actual | Pass? |
 |---|---|---|---|---|---|
@@ -842,68 +908,244 @@ resolves its ids automatically.
 
 **TOTAL: 50 · PASSED: 50 · FAILED: 0**
 
-All 50 cases pass against a backend built from the current source. TC-50 was added after testing
-exposed the defect described in finding 4 below; on an older build that endpoint answers **500**, so
-the backend must be rebuilt and restarted for the case to pass.
+**Suite 2 — 47 requests in 9 folders, 59 assertions, all passed**
 
-Three findings during test development are worth recording, because two were defects in the *tests*
-rather than the API:
+| Folder | Requests | Assertions | Failures |
+|---|---|---|---|
+| 1. Auth | 5 | 7 | 0 |
+| 2. Setup (saves ids) | 3 | 1 | 0 |
+| 3. Vehicles (CRUD + 404) | 5 | 5 | 0 |
+| 4. Stations & availability | 5 | 7 | 0 |
+| 5. Bookings (create / limits / conflict) | 11 | 9 | 0 |
+| 6. Payment (simulated) | 5 | 6 | 0 |
+| 7. Security (401 / 403) | 5 | 5 | 0 |
+| 8. Reviews, notifications, issues, fuel, news | 7 | 7 | 0 |
+| 9. Teardown (optional cleanup) | 1 | 2 | 0 |
+| **Total** | **47** | **59** | **0** |
 
-1. `POST /api/vehicles` initially returned 400. The cause was the test payload: `vehicleType` was
-   `"CAR"`, but the enum is `ELECTRIC_CAR` / `ELECTRIC_BIKE` / `ELECTRIC_THREE_WHEELER`. Bean
-   Validation correctly rejected an unknown enum constant — the API was right, the test data was
-   wrong.
-2. `PUT /api/vehicles/{unknown}` returned 400 instead of 404 because the test body was also invalid;
-   validation runs before the existence check by design, so a valid body was required to reach the
-   404 path.
-3. TC-24 depends on the service being full, and two further cases depend on server *state*: a
-   booking can only be paid **once** (a second attempt correctly returns `400 "Booking is already
-   paid and confirmed"`), and TC-23 needs a booking that genuinely belongs to another user
-   (an empty id yields 404, not 403). The suite and the Postman collection therefore create the
-   state each case needs — filling capacity for TC-24 and creating dedicated unpaid bookings for
-   the two payment cases — so every result is produced deterministically rather than by luck.
-   The wider lesson recorded from this: **a test that depends on hidden state is a fragile test.**
-   All three were defects in the test harness, not in the API.
-4. **A real API defect surfaced while fixing the test harness.** Making the cleanup script delete
-   leftover test vehicles revealed that `DELETE /api/vehicles/{id}` answered **500 Internal Server
-   Error** — not 404 or 409 — whenever the vehicle was referenced by any booking. The foreign key is
-   `ON DELETE RESTRICT`, so Hibernate raised a `DataIntegrityViolationException` that
-   `GlobalExceptionHandler` did not handle and which therefore escaped as a 500. This had gone
-   unnoticed because the original TC-09 deleted a *freshly created* vehicle, which has no booking
-   history, so the failing path was never exercised. Fixed by guarding the delete in the service
-   (`ResourceInUseException` → 409 with the message "This vehicle has booking history and cannot be
-   deleted"), plus a `DataIntegrityViolationException` handler as a safety net so that no foreign-key
-   violation anywhere in the API can surface as a 500. TC-50 now covers it. **The lesson: a test
-   suite is only as good as the state it exercises — a green suite can still hide an untested path.**
+**SUMMARY FIGURE — Results diagram** *(image provided: `docs/figures/figure-results.svg`)*
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|        INSERT THE RESULTS DIAGRAM HERE                                    |
+|        docs/figures/figure-results.svg                                    |
+|                                                                           |
+|   Bar chart of requests per folder, the headline totals (50 cases,        |
+|   47 requests, 59 assertions, 0 failures) and the HTTP status codes       |
+|   exercised. Convert it to PNG with:                                      |
+|   rsvg-convert -o figure-results.png docs/figures/figure-results.svg      |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 13: Test results — requests per folder, totals, and the status codes exercised.*
 
 ### 8.3 Screenshots
 
-The following figures are required in the submitted PDF. Each is one Send in Postman
-(`docs/EV-Finder.postman_collection.json`) — make sure the screenshot includes **the method, the URL,
-the request body, and the status code with the response body**. Add the red arrow/box in Figure 4
-yourself to make the status code obvious.
+Each box below is intentionally empty: paste the matching image into it and keep the caption. The
+two diagram figures are already produced as SVG files; the rest come from Postman and the running
+stack. `docs/HOW-TO-SCREENSHOTS.md` gives the exact steps, and the request names match the Postman
+collection.
 
-| Figure | What to capture | How |
-|---|---|---|
-| Figure 1 | Layered architecture diagram | Redraw the diagram in Section 4 in draw.io |
-| Figure 2 | Application started successfully | Run `mvnw spring-boot:run`; screenshot the console showing `Tomcat started on port 8080` |
-| Figure 3 | Database tables and rows | phpMyAdmin → `ev_finder` → `bookings` table with rows |
-| Figure 4 | TC-01 login returns a JWT | Folder `1. Auth` → "TC-01 Login as USER (200)" |
-| Figure 5 | TC-16 booking created (201) | Folder `6. Bookings` → "TC-16 POST /api/bookings (201)" |
-| Figure 6 | TC-24 capacity conflict (409) | Run TC-16 four times, then "TC-24 Capacity exceeded (409)" |
-| Figure 7 | TC-25 payment SUCCESS | Folder `7. Payment` → "TC-25 Pay a booking — SUCCESS" |
-| Figure 8 | TC-26 forced payment failure | Same folder → "TC-26 Forced failure — FAILED" |
-| Figure 9 | TC-13 unknown station (404) | Folder `5. Stations` → "TC-13 GET unknown station (404)" |
-| Figure 10 | TC-33 role violation (403) | Folder `3. Security` → "TC-33 USER calling admin endpoint (403)" |
-| Figure 11 | TC-03 missing token (401) | Folder `3. Security` → "TC-03 … without token (401)" |
-| Figure 12 | Android client consuming the API | Home screen of the app while the backend runs |
+**FIGURE 4 — TC-01 login returns a JWT (200 OK)**
 
-*[SCREENSHOT — Figure 4: TC-01 login in Postman, showing the 200 status and the JWT in the response]*
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    Postman -> folder 1. Auth -> "TC-01 Login as USER (200)".              |
+|    Show the method + URL, the request body, the 200 status code, and      |
+|    the token and role in the response.                                    |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
 
-*[SCREENSHOT — Figure 6: TC-24 showing 409 Conflict and the message "No free slots left for the
-selected time"]*
+*Figure 4: Successful login returning a JWT and the USER role.*
 
-*[SCREENSHOT — Figure 10: TC-33 showing 403 Forbidden for a USER calling an ADMIN endpoint]*
+**FIGURE 5 — TC-16 booking created (201 Created)**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    Postman -> folder 5. Bookings -> "TC-16 POST /api/bookings (201)".     |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 5: A booking created with status PENDING.*
+
+**FIGURE 6 — TC-24 capacity conflict (409 Conflict)**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    Postman -> folder 5 -> send the three "Fill capacity" requests, then   |
+|    "TC-24 Capacity exceeded (409)". Show the 409 and the message          |
+|    "No free slots left for the selected time".                            |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 6: The double-booking rule rejecting a reservation once capacity is reached.*
+
+**FIGURE 7 — TC-25 payment SUCCESS**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    Postman -> folder 6. Payment -> "Setup: create booking to pay", then   |
+|    "TC-25 Pay a booking — SUCCESS". Show status SUCCESS and the           |
+|    SIM- transaction reference.                                            |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 7: The simulated gateway confirming a payment.*
+
+**FIGURE 8 — TC-26 forced payment failure (FAILED)**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    Postman -> folder 6 -> "Setup: create booking for forced failure",     |
+|    then "TC-26 Forced failure — FAILED".                                  |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 8: The failure path of the simulated gateway; the slot is released.*
+
+**FIGURE 9 — TC-13 unknown station (404 Not Found)**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    Postman -> folder 4. Stations & availability -> "TC-13 GET unknown     |
+|    station (404)".                                                        |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 9: A request for a resource that does not exist.*
+
+**FIGURE 10 — TC-33 role violation (403 Forbidden)**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    Postman -> folder 7. Security -> "TC-33 USER calling admin endpoint    |
+|    (403)".                                                                |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 10: A USER token rejected by an ADMIN-only endpoint.*
+
+**FIGURE 11 — TC-03 missing token (401 Unauthorized)**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    Postman -> folder 7. Security -> "TC-03 GET /api/users/me without      |
+|    token (401)".                                                          |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 11: A protected endpoint called without a token.*
+
+**FIGURE 12 — Collection Runner results (47 requests, 0 failures)**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    Postman -> the collection's "..." menu -> "Run collection" -> Run.     |
+|    Show the results grid with every request PASS and 0 failures.          |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 12: The whole collection passing in a single run.*
+
+**FIGURE 14 — Android client using the API**
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|                        PASTE SCREENSHOT HERE                              |
+|                                                                           |
+|    The app's Home screen with the backend running: station list,          |
+|    availability bars and the fuel section.                                |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+*Figure 14: The native Android client consuming the REST API.*
+
+### 8.4 Findings from testing
+
+Recording what testing actually revealed is more useful than a table of green ticks. Five issues
+surfaced; two were defects in the API, three in the test harness.
+
+1. **`POST /api/vehicles` returned 400** during the first run. The cause was the test payload:
+   `vehicleType` was `"CAR"`, but the enum is `ELECTRIC_CAR` / `ELECTRIC_BIKE` /
+   `ELECTRIC_THREE_WHEELER`. Bean Validation correctly rejected an unknown enum constant — the API
+   was right, the test data was wrong.
+
+2. **`PUT /api/vehicles/{unknown}` returned 400 instead of 404** because the test body was also
+   invalid. Validation runs before the existence check by design, so a *valid* body is required to
+   reach the 404 path. The test was corrected.
+
+3. **State-dependent cases were fragile.** TC-24 only returns 409 when a window is full, and a
+   booking can only be paid **once** (a second attempt correctly returns
+   `400 "Booking is already paid and confirmed"`). Both suites now create the state each case needs —
+   filling capacity before TC-24 and creating dedicated unpaid bookings for the two payment cases —
+   so results are deterministic instead of relying on luck. **A test that depends on hidden state is
+   a fragile test.**
+
+4. **A real API defect: `DELETE /api/vehicles/{id}` answered 500 instead of 409.** The vehicle
+   foreign key in `bookings` is `ON DELETE RESTRICT`, so deleting a vehicle that any booking
+   referenced raised a `DataIntegrityViolationException` that `GlobalExceptionHandler` did not
+   handle; it escaped as an unhandled 500. It had gone unnoticed because the original test deleted a
+   *freshly created* vehicle, which has no booking history — the failing path was never exercised.
+   Fixed with a guard in `VehicleServiceImpl.delete` (`existsByVehicleId` → `ResourceInUseException`
+   → **409** with an explanatory message, which also preserves booking records rather than orphaning
+   them) plus a `DataIntegrityViolationException` handler as a safety net so no foreign-key violation
+   anywhere can surface as a 500. TC-50 now covers it. **A green suite can still hide an untested
+   path.**
+
+5. **A defect in the test harness that a syntax check could not catch.** One payment case failed with
+   404 and "No response". A generator bug produced:
+
+   ```javascript
+   pm.collectionVariables.set('payOkBookingId', date + 'T' + pad(hour) + ':00:00');_start
+   ```
+
+   The trailing bare `_start` is *syntactically valid* JavaScript, so a syntax check passed it, but it
+   throws a `ReferenceError` at runtime. Postman aborts a request whose pre-request script throws —
+   hence "No response" — the variable is never set, and the next request posts a garbage id and
+   receives 404. Two lessons followed: the collection was rewritten so no request depends on
+   asynchronous code or on generated code that has not been executed, and
+   `docs/validate_collection.js` was written to *execute* every script, with the generator now
+   refusing to write a collection containing invalid JavaScript.
 
 ---
 
@@ -911,12 +1153,13 @@ selected time"]*
 
 | Challenge | Cause | How I solved it |
 |---|---|---|
-| **Saving a booking failed with `Data truncated for column 'type'` and the whole booking was rolled back** | The `notifications.type` column was a MySQL `ENUM` that did not include the newly added `NEW_BOOKING` constant, so inserting the notification threw. Because the notification was written in the *same* transaction as the booking, Hibernate marked the transaction rollback-only and discarded a perfectly valid reservation. | Two-part fix. The column was migrated to `VARCHAR(30)` so new types no longer require DDL, and `NotificationService.notify(...)` was rewritten with `@Transactional(propagation = REQUIRES_NEW)` plus a `try/catch` that logs a warning instead of propagating. A notification is a side effect; it must never be able to cancel the business action that triggered it. |
+| **Saving a booking failed with `Data truncated for column 'type'`, and the whole booking rolled back** | The `notifications.type` column was a MySQL `ENUM` that did not include the newly added `NEW_BOOKING` constant, so inserting the notification threw. Because the notification was written in the *same* transaction as the booking, Hibernate marked the transaction rollback-only and discarded a valid reservation. | Two-part fix. The column was migrated to `VARCHAR(30)` so new types no longer require DDL, and `NotificationService.notify(...)` was rewritten with `@Transactional(propagation = REQUIRES_NEW)` plus a `try/catch` that logs a warning instead of propagating. A notification is a side effect; it must never be able to cancel the business action that triggered it. |
 | **Two users could reserve the same slot, overbooking a charge point** | The first implementation only checked that the service existed and was ACTIVE, so capacity was never considered. A single-slot flag would also have failed, because one charge point must serve many non-overlapping bookings per day. | Introduced a capacity model: `station_services.available_slots` is the installed capacity, and a booking is refused when the count of PENDING/CONFIRMED bookings overlapping the requested half-open window reaches that capacity. The count and the insert happen in one `@Transactional` method so two concurrent requests cannot both claim the last slot, and a composite index `idx_bookings_conflict(service_id, status, start_time, end_time)` keeps the count fast. Verified by TC-24 (409). |
-| **`LazyInitializationException` when returning a review response** | `spring.jpa.open-in-view=false` closes the Hibernate session when the transaction ends. The controller then tried to serialise a response that still referenced a lazy `user`/`station` proxy, and there was no session left to resolve it. | Enabled lazy loading only where it is legitimate: the review creation path is `@Transactional` so the association loads inside the transaction, and all responses are built by DTO mappers in the service layer (`BookingResponse.from`, `ReviewResponse.from`) which touch the associations while the session is still open. The API never serialises entities directly. |
-| **A new controller returned 404 while the same path without a token returned 401** | The running server was an older process that predated the new controller classes. The 401 was produced by the security filter chain, which authenticates *before* routing, so an unmapped path also answers 401 unauthenticated — which made the endpoint look "present but forbidden" instead of "missing". | Rebuilt and restarted the backend so the new mappings were registered, then re-tested. The lesson recorded in the project notes: when an authenticated call returns 404 but an unauthenticated call returns 401, check that the running server contains the code before debugging the routing. |
-| **`DELETE /api/vehicles/{id}` returned 500 instead of 409** | The vehicle foreign key in `bookings` is `ON DELETE RESTRICT`. Deleting a vehicle that any booking referenced raised a `DataIntegrityViolationException`, and `GlobalExceptionHandler` had no handler for it, so it escaped as an unhandled 500. The original test only deleted a *freshly created* vehicle with no history, so the broken path was never exercised. | Added a guard in `VehicleServiceImpl.delete` that checks `bookingRepository.existsByVehicleId(...)` first and throws `ResourceInUseException`, mapped to **409 Conflict** with a message explaining the vehicle has booking history — which also preserves booking records rather than orphaning them. Added a `DataIntegrityViolationException` handler as a safety net so no foreign-key violation anywhere can surface as a 500, and added TC-50 to cover the case. |
+| **`LazyInitializationException` when returning a review response** | `spring.jpa.open-in-view=false` closes the Hibernate session when the transaction ends. The controller then tried to serialise a response that still referenced a lazy `user`/`station` proxy, and there was no session left to resolve it. | Enabled lazy loading only where it is legitimate: the review creation path is `@Transactional` so the association loads inside the transaction, and all responses are built by DTO mappers in the service layer, which touch the associations while the session is still open. The API never serialises entities directly. |
+| **`DELETE /api/vehicles/{id}` returned 500 instead of 409** | The vehicle foreign key in `bookings` is `ON DELETE RESTRICT`. Deleting a referenced vehicle raised a `DataIntegrityViolationException`, and `GlobalExceptionHandler` had no handler for it, so it escaped as a 500. The original test only deleted a freshly created vehicle, so the broken path was never exercised. | Added a guard in `VehicleServiceImpl.delete` that checks `bookingRepository.existsByVehicleId(...)` first and throws `ResourceInUseException`, mapped to **409 Conflict** with a message explaining the vehicle has booking history — which also preserves booking records. Added a `DataIntegrityViolationException` handler as a safety net so no foreign-key violation anywhere can surface as a 500, and added TC-50 to cover the case. |
+| **A new controller returned 404 while the same path without a token returned 401** | The running server was an older process that predated the new controller class. The 401 came from the security filter chain, which authenticates *before* routing, so an unmapped path also answers 401 unauthenticated — which made the endpoint look "present but forbidden" rather than "missing". | Rebuilt and restarted the backend so the new mappings were registered, then re-tested. The lesson: when an authenticated call returns 404 but an unauthenticated call returns 401, check that the running server contains the code before debugging the routing. |
 | **Android client could not reach the backend ("request failed")** | The client's base URL is a LAN IP constant; the PC's DHCP address changed (…102 → …103 → …105), so the app was calling an address that no longer existed. | Updated the `HOST_IP` constant and documented in the README that it must match the machine's current IPv4 address; a DHCP reservation or a static address is the durable fix. |
+| **A payment test failed with 404 and "No response"** | A generator bug produced `...set('x', ...);_start`, which is valid syntax but throws at runtime. Postman aborts a request whose pre-request script throws, so the id was never set. | Fixed the generator, made the collection depend on no asynchronous code, added guards that reject a value which is not a booking id, and wrote `docs/validate_collection.js` to execute every script so this class of bug fails in the harness rather than in the Runner. |
 
 ---
 
@@ -929,41 +1172,47 @@ and it delivers that end to end. Each objective from Section 1.2 was met:
 
 | Objective | Outcome |
 |---|---|
-| JWT auth for three roles with BCrypt hashing | Implemented; `BCryptPasswordEncoder` stores only hashes; roles drive separate client shells. Verified by TC-01/02/03/04 |
+| JWT auth for three roles with BCrypt hashing | Implemented; `BCryptPasswordEncoder` stores only hashes; roles drive separate client shells. Verified by TC-01…TC-04 |
 | Model stations, services and vehicles with capacity | Implemented across 12 tables; capacity lives on `station_services`, vehicles are owner-scoped. TC-06…TC-15 |
 | Prevent double-booking with 409 | Implemented with the overlap-count rule, verified by TC-24 |
 | Full booking lifecycle with simulated payment | PENDING → CONFIRMED/CANCELLED with SUCCESS, FAILED and REFUNDED payment states. TC-16, TC-25, TC-26, TC-48 |
-| Documented REST API with correct status codes | 54 endpoints over 16 controllers; 200/201/204/400/401/403/404/409 all exercised. TC-01…TC-49 |
-| Verify with an automated suite | 50 cases, all passing, script and raw evidence committed; one real 500-on-delete defect found and fixed in the process |
+| Documented REST API with correct status codes | 54 endpoints over 16 controllers; 200/201/204/400/401/403/404/409 all exercised. TC-01…TC-50 |
+| Verify with automated suites | 50 curl cases and 47 Postman requests / 59 assertions, all passing, with scripts and raw evidence committed |
 
-Beyond the original plan the project grew three features that make it a usable product rather than a
-CRUD demo: real-time availability over WebSocket, a notification system with an animated badge, a
+Beyond the original plan the project grew features that make it a usable product rather than a CRUD
+demo: real-time availability over WebSocket, a notification system with an animated badge, a
 fuel-station module with inventory, user issue reporting with an admin reply loop, and a cached
-energy-news feed. The most valuable engineering lesson was that business rules belong in the service
-layer inside a transaction boundary, while side effects such as notifications must be isolated so
-they cannot roll back the operation they describe.
+energy-news feed.
+
+The most valuable outcomes were the lessons testing forced. A business rule belongs in the service
+layer inside a transaction boundary, while a side effect such as a notification must be isolated so
+it cannot roll back the operation it describes. A green test suite proves only the paths it
+exercises — the 500 on vehicle deletion survived a passing suite because the test always deleted a
+vehicle with no history. And a test harness is production code: it earned the same review, which is
+why the collection is now validated by a script that executes it rather than one that merely reads it.
 
 ### Future work
 
 1. **Scheduled booking completion.** A `@Scheduled` job should move CONFIRMED bookings to COMPLETED
    once their window ends (and expire no-shows). Today nothing performs that transition, which is why
    the client treats a confirmed booking whose slot has elapsed as reviewable.
-2. **Automated tests in the build.** The acceptance suite is an external script; converting the
+2. **Automated tests in the build.** The two suites are external scripts; converting the
    highest-value cases into JUnit + MockMvc integration tests would run them on every commit, with
    Testcontainers providing a disposable MySQL.
 3. **Versioned migrations.** Replace `ddl-auto=update` with Flyway migrations and set
    `ddl-auto=validate`, so schema history is explicit and production deployment is safe.
 4. **Pagination and filtering.** `GET /api/stations` and `/api/admin/bookings` return complete lists;
    `Pageable` (or a keyset cursor) would bound the payload as data grows.
-5. **Push notifications.** In-app notifications only reach a user who opens the app; Firebase Cloud
+5. **Soft-delete or `ON DELETE SET NULL` for vehicles.** Refusing to delete a vehicle with history
+   preserves the audit trail but leaves the user stuck; denormalising the vehicle details onto the
+   booking, or a soft-delete flag, would allow both.
+6. **Push notifications.** In-app notifications only reach a user who opens the app; Firebase Cloud
    Messaging would deliver booking and payment events to the device.
-6. **Consolidate the two fuel sources.** The public OpenStreetMap fuel/LPG layer and the
+7. **Consolidate the two fuel sources.** The public OpenStreetMap fuel/LPG layer and the
    operator-managed fuel-station module are separate; one canonical module would remove the overlap.
-7. **Secrets and storage hardening.** Move the JWT secret to an environment variable, restrict the
+8. **Secrets and storage hardening.** Move the JWT secret to an environment variable, restrict the
    WebSocket allowed origins, and add refresh tokens so a 24-hour token is not the only session
    mechanism.
-8. **Observability.** Structured logging with correlation ids, plus Spring Boot Actuator health and
-   metrics endpoints, to make the service operable rather than merely working.
 
 ---
 
@@ -1003,17 +1252,18 @@ https://developer.android.com/develop/ui/compose [Accessed: 25-Sep-2026].
 [11] Square, "Retrofit — A type-safe HTTP client for Android and Java." [Online]. Available:
 https://square.github.io/retrofit/ [Accessed: 25-Sep-2026].
 
-[12] OpenStreetMap contributors, "OpenStreetMap." [Online]. Available:
+[12] Postman, "Postman Learning Center — Collection Runner." [Online]. Available:
+https://learning.postman.com/docs/collections/running-collections/intro-to-collection-runs/
+[Accessed: 25-Sep-2026].
+
+[13] OpenStreetMap contributors, "OpenStreetMap." [Online]. Available:
 https://www.openstreetmap.org/ [Accessed: 25-Sep-2026].
 
-[13] osmdroid, "osmdroid — OpenStreetMap Android library." [Online]. Available:
+[14] osmdroid, "osmdroid — OpenStreetMap Android library." [Online]. Available:
 https://github.com/osmdroid/osmdroid [Accessed: 25-Sep-2026].
 
-[14] Overpass API, "Overpass API — OpenStreetMap Wiki." [Online]. Available:
+[15] Overpass API, "Overpass API — OpenStreetMap Wiki." [Online]. Available:
 https://wiki.openstreetmap.org/wiki/Overpass_API [Accessed: 25-Sep-2026].
-
-[15] Postman, "Postman Learning Center." [Online]. Available:
-https://learning.postman.com/docs/ [Accessed: 25-Sep-2026].
 
 ---
 
@@ -1021,15 +1271,15 @@ https://learning.postman.com/docs/ [Accessed: 25-Sep-2026].
 
 | Done | Item |
 |---|---|
-| ✅ | Cover page filled in completely, including GitHub link |
-| ✅ | All blue guidance boxes, orange boxes and grey placeholders removed *(the `[FILL IN]` and `[SCREENSHOT]` markers in this draft must be replaced before export)* |
+| ⬜ | Cover page filled in completely *(Student ID, Section, Submitted To, Date, GitHub link)* |
+| ⬜ | Every **FIGURE** box has an image pasted into it, and every `[FILL IN]` marker is gone |
 | ✅ | Project runs with `mvnw spring-boot:run` without errors |
 | ✅ | Layered structure: controller, service, repository, entity packages |
 | ✅ | All CRUD endpoints implemented and documented in Section 6 |
 | ✅ | Correct status codes: 200, 201, 204, 400, 401, 403, 404 and 409 |
 | ✅ | Update logic checks existence with `findById` before saving |
-| ⬜ | Every test case has a labelled screenshot *(Figures 4–12 to be captured from Postman)* |
-| ✅ | No real passwords visible in code or screenshots *(`spring.datasource.password=****`, JWT secret masked)* |
+| ✅ | Two independent test suites, both passing, with raw evidence committed |
+| ✅ | No real passwords visible in code or screenshots *(`password=****`, JWT secret masked)* |
 | ✅ | References listed; all writing in your own words |
 | ⬜ | Report exported to PDF and named `StudentID_Name_SpringBootProject.pdf` |
 

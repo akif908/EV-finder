@@ -18,11 +18,10 @@ body:
 scripts:
   - type: beforeRequest
     code: |-
-      // Fail with a readable message instead of sending a literal {{failBookingId}},
-      // which would come back as a confusing 404.
       const id = pm.collectionVariables.get('failBookingId');
-      if (!id) {
-          console.error('TC-26: failBookingId is empty — run "TC-26" first');
+      const usable = typeof id === 'string' && id.length >= 32;
+      if (!usable) {
+          console.error('TC-26: failBookingId is "' + id + '" — run "Setup: create booking for forced failure" first');
           pm.collectionVariables.set('failBookingId', 'missing-run-the-setup-request-first');
       }
     language: text/javascript

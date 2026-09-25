@@ -1,0 +1,15 @@
+$kind: http-request
+description: "Expected 409 Conflict. A vehicle referenced by bookings cannot be deleted: the foreign key is ON DELETE RESTRICT, so before the service guarded this the API answered 500. TC-16 above has just booked this vehicle, which is what gives it history, so the delete is always refused and nothing is lost."
+url: "{{baseUrl}}/api/vehicles/{{vehicleId}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-50 status is 409', () => pm.response.to.have.status(409));
+      pm.test('message explains the vehicle cannot be deleted',
+          () => pm.expect(pm.response.json().message).to.contain('booking history'));
+    language: text/javascript
+order: 11000

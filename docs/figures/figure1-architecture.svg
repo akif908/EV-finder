@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Figure 1 — Layered architecture of the EV Finder API.
+  Drawn in the style of the report template: one box per layer, arrows between
+  them labelled request / response, cross-cutting concerns to the side.
+  Open in a browser, or convert to PNG for the report:
+      rsvg-convert -o figure1.png figure1-architecture.svg
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="820"
+     viewBox="0 0 880 820" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+
+  <rect width="880" height="820" fill="#ffffff"/>
+
+  <text x="440" y="40" text-anchor="middle" font-size="20" font-weight="bold" fill="#111111">
+    Figure 1 — Layered architecture of the EV Finder API
+  </text>
+
+  <!-- ============ CLIENT ============ -->
+  <rect x="150" y="70" width="420" height="72" rx="10" fill="#eef7f0" stroke="#2f7d4f" stroke-width="2"/>
+  <text x="360" y="100" text-anchor="middle" font-size="15" font-weight="bold" fill="#1d4d33">Client</text>
+  <text x="360" y="122" text-anchor="middle" font-size="12" fill="#33604a">
+    Android app (Kotlin / Compose, Retrofit) · Postman · curl
+  </text>
+
+  <!-- arrow: client -> controller -->
+  <line x1="360" y1="142" x2="360" y2="186" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="360" y1="186" x2="360" y2="142" stroke="#888" stroke-width="2" marker-end="url(#arrowGrey)"/>
+  <text x="372" y="170" font-size="11" fill="#444">HTTP request</text>
+  <text x="372" y="184" font-size="11" fill="#888">JSON response</text>
+
+  <!-- ============ CONTROLLER ============ -->
+  <rect x="150" y="188" width="420" height="86" rx="10" fill="#eaf0fb" stroke="#2f5b9e" stroke-width="2"/>
+  <text x="360" y="214" text-anchor="middle" font-size="15" font-weight="bold" fill="#1c3a66">
+    Controller layer — @RestController
+  </text>
+  <text x="360" y="236" text-anchor="middle" font-size="12" fill="#33507d">
+    Maps URLs · validates input (@Valid) · sets status codes
+  </text>
+  <text x="360" y="256" text-anchor="middle" font-size="12" fill="#33507d">
+    16 controllers · returns DTOs, no business rules
+  </text>
+
+  <!-- arrow: controller -> service -->
+  <line x1="360" y1="274" x2="360" y2="318" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="372" y="300" font-size="11" fill="#444">request / response DTOs</text>
+
+  <!-- ============ SERVICE ============ -->
+  <rect x="150" y="320" width="420" height="112" rx="10" fill="#fdf3e7" stroke="#a9701c" stroke-width="2"/>
+  <text x="360" y="346" text-anchor="middle" font-size="15" font-weight="bold" fill="#7a4f10">
+    Service layer — @Service
+  </text>
+  <text x="360" y="368" text-anchor="middle" font-size="12" fill="#8a5d1d">
+    Business rules: capacity &amp; overlap checks, ownership, payment lifecycle
+  </text>
+  <text x="360" y="388" text-anchor="middle" font-size="12" fill="#8a5d1d">
+    @Transactional boundaries live here · notifies operators, broadcasts availability
+  </text>
+  <text x="360" y="412" text-anchor="middle" font-size="12" fill="#8a5d1d">
+    11 interfaces + 12 implementations
+  </text>
+
+  <!-- arrow: service -> repository -->
+  <line x1="360" y1="432" x2="360" y2="476" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="372" y="458" font-size="11" fill="#444">entities</text>
+
+  <!-- ============ REPOSITORY ============ -->
+  <rect x="150" y="478" width="420" height="86" rx="10" fill="#f0ecfa" stroke="#5a3f9e" stroke-width="2"/>
+  <text x="360" y="504" text-anchor="middle" font-size="15" font-weight="bold" fill="#3f2c73">
+    Repository layer — JpaRepository
+  </text>
+  <text x="360" y="526" text-anchor="middle" font-size="12" fill="#54418a">
+    save · findById · delete + derived queries and @Query JPQL
+  </text>
+  <text x="360" y="546" text-anchor="middle" font-size="12" fill="#54418a">
+    12 repositories
+  </text>
+
+  <!-- arrow: repository -> database -->
+  <line x1="360" y1="564" x2="360" y2="608" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="372" y="590" font-size="11" fill="#444">JDBC via Hibernate</text>
+
+  <!-- ============ DATABASE ============ -->
+  <rect x="150" y="610" width="420" height="72" rx="10" fill="#eaeaea" stroke="#555" stroke-width="2"/>
+  <text x="360" y="638" text-anchor="middle" font-size="15" font-weight="bold" fill="#222">Database — MySQL 8</text>
+  <text x="360" y="660" text-anchor="middle" font-size="12" fill="#444">
+    12 tables · InnoDB / utf8mb4 · schema.sql
+  </text>
+
+  <!-- ============ CROSS-CUTTING ============ -->
+  <rect x="610" y="188" width="240" height="336" rx="10" fill="#fbfbe8" stroke="#8a8a2f"
+        stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="730" y="214" text-anchor="middle" font-size="13" font-weight="bold" fill="#5c5c14">
+    Cross-cutting concerns
+  </text>
+  <text x="730" y="240" text-anchor="middle" font-size="11" fill="#6a6a22">applied to every request</text>
+
+  <text x="626" y="272" font-size="11.5" fill="#3d3d0f" font-weight="bold">SecurityConfig + JWT filter</text>
+  <text x="626" y="290" font-size="11" fill="#555">authenticates, then @PreAuthorize</text>
+  <text x="626" y="306" font-size="11" fill="#555">decides USER / OPERATOR / ADMIN</text>
+
+  <text x="626" y="342" font-size="11.5" fill="#3d3d0f" font-weight="bold">GlobalExceptionHandler</text>
+  <text x="626" y="360" font-size="11" fill="#555">maps every exception to a status</text>
+  <text x="626" y="376" font-size="11" fill="#555">and a uniform JSON error body</text>
+
+  <text x="626" y="412" font-size="11.5" fill="#3d3d0f" font-weight="bold">AvailabilityWebSocketHandler</text>
+  <text x="626" y="430" font-size="11" fill="#555">broadcasts availability_changed</text>
+  <text x="626" y="446" font-size="11" fill="#555">to clients on /ws</text>
+
+  <text x="626" y="482" font-size="11.5" fill="#3d3d0f" font-weight="bold">NotificationService</text>
+  <text x="626" y="500" font-size="11" fill="#555">side effects, in their own</text>
+
+  <!-- dashed links from cross-cutting box to the layers it wraps -->
+  <line x1="610" y1="200" x2="570" y2="200" stroke="#8a8a2f" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <line x1="610" y1="250" x2="570" y2="250" stroke="#8a8a2f" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <line x1="610" y1="360" x2="570" y2="360" stroke="#8a8a2f" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <line x1="610" y1="500" x2="570" y2="500" stroke="#8a8a2f" stroke-width="1.5" stroke-dasharray="5 4"/>
+
+  <!-- external services -->
+  <rect x="150" y="706" width="700" height="66" rx="10" fill="#f7f9fb" stroke="#7b8b9a" stroke-width="1.5"/>
+  <text x="500" y="730" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#3f4d5a">
+    Free external services (no API key, no billing)
+  </text>
+  <text x="500" y="752" text-anchor="middle" font-size="11.5" fill="#54636f">
+    OpenStreetMap tiles · Overpass API (fuel/LPG POIs) · Google News RSS (energy headlines)
+  </text>
+
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#444"/>
+    </marker>
+    <marker id="arrowGrey" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#999"/>
+    </marker>
+  </defs>
+</svg>

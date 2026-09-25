@@ -1,12 +1,12 @@
 ### TC-01  POST /api/auth/login
 expected: 200   actual: 200   -> PASS
 request : {"email":"test@ev.com","password":"secret123"}
-response: {"token":"eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmM2MxZjVhMS1hMjg4LTQ1MmQtOTAwMC1hOGM3MDk0N2FmM2UiLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc5MDMzMjc4MCwiZXhwIjoxNzkwNDE5MTgwfQ.Z9-JmwbtcOAI940uIsIsfJybPvy7ane8hMdAOzOIY9Ip--S4Q1sYj94OuJYqOcSu","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","name":"Test User","email":"test@ev.com","role":"USER"}
+response: {"token":"eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmM2MxZjVhMS1hMjg4LTQ1MmQtOTAwMC1hOGM3MDk0N2FmM2UiLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc5MDMzNDgyOCwiZXhwIjoxNzkwNDIxMjI4fQ.k92esVKCxfRh7yO-K2YvoFbP7CEZmOn91fmA-E8KSSoqfJancPP-CjL80El6rpU5","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","name":"Test User","email":"test@ev.com","role":"USER"}
 
 ### TC-02  POST /api/auth/login
 expected: 401   actual: 401   -> PASS
 request : {"email":"test@ev.com","password":"wrong-password"}
-response: {"timestamp":"2026-09-25T16:39:40.9870907","status":401,"error":"Unauthorized","message":"Invalid email or password","path":"/api/auth/login"}
+response: {"timestamp":"2026-09-25T17:13:49.1869625","status":401,"error":"Unauthorized","message":"Invalid email or password","path":"/api/auth/login"}
 
 ### TC-03  GET /api/users/me
 expected: 401   actual: 401   -> PASS
@@ -19,34 +19,34 @@ response: {"id":"f3c1f5a1-a288-452d-9000-a8c70947af3e","name":"Test User","email
 ### TC-05  POST /api/auth/register
 expected: 400   actual: 400   -> PASS
 request : {"name":"","email":"not-an-email","password":"123"}
-response: {"timestamp":"2026-09-25T16:39:41.3567784","status":400,"error":"Bad Request","message":"password: size must be between 6 and 100; email: must be a well-formed email address; role: must not be null; name: must not be blank","path":"/api/auth/register"}
+response: {"timestamp":"2026-09-25T17:13:49.6038012","status":400,"error":"Bad Request","message":"name: must not be blank; email: must be a well-formed email address; password: size must be between 6 and 100; role: must not be null","path":"/api/auth/register"}
 
 ### TC-06  POST /api/vehicles
 expected: 201   actual: 201   -> PASS
-request : {"manufacturer":"Test","model":"Acceptance Car","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":60,"registrationNo":"TST-90332781"}
-response: {"id":"4844f62c-1cef-4559-af11-8deb28ef4eb3","manufacturer":"Test","model":"Acceptance Car","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":60,"registrationNo":"TST-90332781"}
+request : {"manufacturer":"Test","model":"Acceptance Car","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":60,"registrationNo":"TST-90334829"}
+response: {"id":"5783d42e-240b-405e-aff5-47bda082aaed","manufacturer":"Test","model":"Acceptance Car","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":60,"registrationNo":"TST-90334829"}
 
-### TC-07  PUT /api/vehicles/4844f62c-1cef-4559-af11-8deb28ef4eb3
+### TC-07  PUT /api/vehicles/5783d42e-240b-405e-aff5-47bda082aaed
 expected: 200   actual: 200   -> PASS
-request : {"manufacturer":"Test","model":"Acceptance Car v2","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":64,"registrationNo":"TST-90332781"}
-response: {"id":"4844f62c-1cef-4559-af11-8deb28ef4eb3","manufacturer":"Test","model":"Acceptance Car v2","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":64,"registrationNo":"TST-90332781"}
+request : {"manufacturer":"Test","model":"Acceptance Car v2","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":64,"registrationNo":"TST-90334829"}
+response: {"id":"5783d42e-240b-405e-aff5-47bda082aaed","manufacturer":"Test","model":"Acceptance Car v2","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":64,"registrationNo":"TST-90334829"}
 
 ### TC-08  PUT /api/vehicles/does-not-exist
 expected: 404   actual: 404   -> PASS
-request : {"manufacturer":"Test","model":"Acceptance Car v2","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":64,"registrationNo":"TST-90332781"}
-response: {"timestamp":"2026-09-25T16:39:42.4101165","status":404,"error":"Not Found","message":"Vehicle not found: does-not-exist","path":"/api/vehicles/does-not-exist"}
+request : {"manufacturer":"Test","model":"Acceptance Car v2","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":64,"registrationNo":"TST-90334829"}
+response: {"timestamp":"2026-09-25T17:13:50.6554867","status":404,"error":"Not Found","message":"Vehicle not found: does-not-exist","path":"/api/vehicles/does-not-exist"}
 
-### TC-09  DELETE /api/vehicles/4844f62c-1cef-4559-af11-8deb28ef4eb3
+### TC-09  DELETE /api/vehicles/5783d42e-240b-405e-aff5-47bda082aaed
 expected: 204   actual: 204   -> PASS
 response: 
 
 ### TC-10  DELETE /api/vehicles/does-not-exist
 expected: 404   actual: 404   -> PASS
-response: {"timestamp":"2026-09-25T16:39:42.6607221","status":404,"error":"Not Found","message":"Vehicle not found: does-not-exist","path":"/api/vehicles/does-not-exist"}
+response: {"timestamp":"2026-09-25T17:13:50.9383345","status":404,"error":"Not Found","message":"Vehicle not found: does-not-exist","path":"/api/vehicles/does-not-exist"}
 
-### TC-50  DELETE /api/vehicles/8314fc91-b5d5-44e8-af29-89ef20f4b4ad
-expected: 409   actual: 500   -> FAIL
-response: {"timestamp":"2026-09-25T10:39:43.027Z","status":500,"error":"Internal Server Error","path":"/api/vehicles/8314fc91-b5d5-44e8-af29-89ef20f4b4ad"}
+### TC-50  DELETE /api/vehicles/583dc060-479e-4498-b110-1d6cdee5e6f6
+expected: 409   actual: 409   -> PASS
+response: {"timestamp":"2026-09-25T17:13:51.3885696","status":409,"error":"Conflict","message":"This vehicle has booking history and cannot be deleted: DHA-11-2222","path":"/api/vehicles/583dc060-479e-4498-b110-1d6cdee5e6f6"}
 
 ### TC-11  GET /api/stations
 expected: 200   actual: 200   -> PASS
@@ -58,7 +58,7 @@ response: {"id":"be28ac01-970d-44de-a02c-8267a58adca8","name":"Uttara UltraCharg
 
 ### TC-13  GET /api/stations/does-not-exist
 expected: 404   actual: 404   -> PASS
-response: {"timestamp":"2026-09-25T16:39:43.4772987","status":404,"error":"Not Found","message":"Station not found: does-not-exist","path":"/api/stations/does-not-exist"}
+response: {"timestamp":"2026-09-25T17:13:51.8423764","status":404,"error":"Not Found","message":"Station not found: does-not-exist","path":"/api/stations/does-not-exist"}
 
 ### TC-14  GET /api/stations/nearby?latitude=23.78&longitude=90.41&radiusKm=15
 expected: 200   actual: 200   -> PASS
@@ -68,54 +68,54 @@ response: [{"id":"bc97975e-a92f-11f1-a41d-4258f0af9cfd","name":"Mohakhali PowerP
 expected: 200   actual: 200   -> PASS
 response: [{"startTime":"2026-09-26T00:00","endTime":"2026-09-26T01:00","capacity":2,"available":2,"bookable":true},{"startTime":"2026-09-26T01:00","endTime":"2026-09-26T02:00","capacity":2,"available":2,"bookable":true},{"startTime":"2026-09-26T02:00","endTime":"2026-09-26T03:00","capacity":2,"available":2,"bookable":true},{"startTime":"2026-09-26T03:00","endTime":"2026-09-26T04:00","capacity":2,"available
 
-### TC-16 POST /api/bookings -> 201 (created c4bec944-7f3d-43a2-b0ad-5ba94300a829)
+### TC-16 POST /api/bookings -> 201 (created 3127a76f-0d3e-4058-932c-3442727a3386)
 ### TC-17  POST /api/bookings
 expected: 400   actual: 400   -> PASS
 request : {"vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","startTime":"2026-09-26T11:00:00","endTime":"2026-09-26T10:00:00"}
-response: {"timestamp":"2026-09-25T16:39:44.16378","status":400,"error":"Bad Request","message":"End time must be after start time","path":"/api/bookings"}
+response: {"timestamp":"2026-09-25T17:13:52.547035","status":400,"error":"Bad Request","message":"End time must be after start time","path":"/api/bookings"}
 
 ### TC-18  POST /api/bookings
 expected: 400   actual: 400   -> PASS
 request : {"vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","startTime":"2020-01-01T10:00:00","endTime":"2020-01-01T11:00:00"}
-response: {"timestamp":"2026-09-25T16:39:44.3131771","status":400,"error":"Bad Request","message":"Cannot book a slot in the past","path":"/api/bookings"}
+response: {"timestamp":"2026-09-25T17:13:52.669716","status":400,"error":"Bad Request","message":"Cannot book a slot in the past","path":"/api/bookings"}
 
 ### TC-19  POST /api/bookings
 expected: 404   actual: 404   -> PASS
 request : {"vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","serviceId":"does-not-exist","startTime":"2026-09-26T10:00:00","endTime":"2026-09-26T11:00:00"}
-response: {"timestamp":"2026-09-25T16:39:44.4406974","status":404,"error":"Not Found","message":"Service not found: does-not-exist","path":"/api/bookings"}
+response: {"timestamp":"2026-09-25T17:13:52.7978547","status":404,"error":"Not Found","message":"Service not found: does-not-exist","path":"/api/bookings"}
 
 ### TC-20  GET /api/bookings/my
 expected: 200   actual: 200   -> PASS
-response: [{"id":"e0938f9e-5167-4d3b-9d96-f5685f87f157","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","vehicleId":"8314fc91-b5d5-44e8-af29-89ef20f4b4ad","stationId":"be28ac01-970d-44de-a02c-8267a58adca8","stationName":"Uttara UltraCharge","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","serviceName":"CHARGING","startTime":"2026-10-03T13:00:00","endTime":"2026-10-03T14:00:00","sta
+response: [{"id":"b85cc1a9-f974-4047-a1c1-89547fc0d5b4","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","stationId":"be28ac01-970d-44de-a02c-8267a58adca8","stationName":"Uttara UltraCharge","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","serviceName":"CHARGING","startTime":"2027-04-04T10:00:00","endTime":"2027-04-04T11:00:00","sta
 
-### TC-21  GET /api/bookings/c4bec944-7f3d-43a2-b0ad-5ba94300a829
+### TC-21  GET /api/bookings/3127a76f-0d3e-4058-932c-3442727a3386
 expected: 200   actual: 200   -> PASS
-response: {"id":"c4bec944-7f3d-43a2-b0ad-5ba94300a829","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","stationId":"be28ac01-970d-44de-a02c-8267a58adca8","stationName":"Uttara UltraCharge","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","serviceName":"CHARGING","startTime":"2026-09-26T10:00:00","endTime":"2026-09-26T11:00:00","stat
+response: {"id":"3127a76f-0d3e-4058-932c-3442727a3386","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","stationId":"be28ac01-970d-44de-a02c-8267a58adca8","stationName":"Uttara UltraCharge","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","serviceName":"CHARGING","startTime":"2026-09-26T10:00:00","endTime":"2026-09-26T11:00:00","stat
 
 ### TC-22  GET /api/bookings/does-not-exist
 expected: 404   actual: 404   -> PASS
-response: {"timestamp":"2026-09-25T16:39:44.9386639","status":404,"error":"Not Found","message":"Booking not found: does-not-exist","path":"/api/bookings/does-not-exist"}
+response: {"timestamp":"2026-09-25T17:13:53.3387778","status":404,"error":"Not Found","message":"Booking not found: does-not-exist","path":"/api/bookings/does-not-exist"}
 
-### TC-23  GET /api/bookings/c4bec944-7f3d-43a2-b0ad-5ba94300a829
+### TC-23  GET /api/bookings/3127a76f-0d3e-4058-932c-3442727a3386
 expected: 403   actual: 403   -> PASS
-response: {"timestamp":"2026-09-25T16:39:45.0614589","status":403,"error":"Forbidden","message":"You can only view your own bookings","path":"/api/bookings/c4bec944-7f3d-43a2-b0ad-5ba94300a829"}
+response: {"timestamp":"2026-09-25T17:13:53.4710371","status":403,"error":"Forbidden","message":"You can only view your own bookings","path":"/api/bookings/3127a76f-0d3e-4058-932c-3442727a3386"}
 
 ### TC-24  POST /api/bookings
 expected: 409   actual: 409   -> PASS
 request : {"vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","startTime":"2026-09-26T10:00:00","endTime":"2026-09-26T11:00:00"}
-response: {"timestamp":"2026-09-25T16:39:45.4422569","status":409,"error":"Conflict","message":"No free slots left for the selected time","path":"/api/bookings"}
+response: {"timestamp":"2026-09-25T17:13:53.9186288","status":409,"error":"Conflict","message":"No free slots left for the selected time","path":"/api/bookings"}
 
-### TC-25 payment success: {"paymentId":"91ce2550-af16-43f4-ae30-8c43218ed2db","bookingId":"c4bec944-7f3d-43a2-b0ad-5ba94300a829","amount":55.00,"paymentMethod":"MOBILE_BANKING","status":"SUCCESS","transactionRef":"SIM-20393191"}
-### TC-26 forced payment failure: {"paymentId":"a44e2f87-b40c-4140-8973-578c0eb52ab1","bookingId":"7b38b4e2-43b9-40cb-b95c-5a3b5c1b7745","amount":55.00,"paymentMethod":"CARD","status":"FAILED","transactionRef":"SIM-EFFAAFDE"}
+### TC-25 payment success: {"paymentId":"0b09fe61-a894-402c-a706-c52d3024fbf6","bookingId":"3127a76f-0d3e-4058-932c-3442727a3386","amount":55.00,"paymentMethod":"MOBILE_BANKING","status":"SUCCESS","transactionRef":"SIM-8A02C5FD"}
+### TC-26 forced payment failure: {"paymentId":"9080725d-e106-4b01-ba51-01b5544e367f","bookingId":"00e47395-3164-44fc-affe-1a8959a02059","amount":55.00,"paymentMethod":"CARD","status":"FAILED","transactionRef":"SIM-22B32F01"}
 ### TC-27  POST /api/payments/does-not-exist
 expected: 404   actual: 404   -> PASS
 request : {"paymentMethod":"CARD","forceFailure":false}
-response: {"timestamp":"2026-09-25T16:39:46.4411802","status":404,"error":"Not Found","message":"Booking not found: does-not-exist","path":"/api/payments/does-not-exist"}
+response: {"timestamp":"2026-09-25T17:13:54.9401722","status":404,"error":"Not Found","message":"Booking not found: does-not-exist","path":"/api/payments/does-not-exist"}
 
 ### TC-28  POST /api/reviews
 expected: 403   actual: 403   -> PASS
-request : {"bookingId":"c4bec944-7f3d-43a2-b0ad-5ba94300a829","rating":5,"comment":"not my booking"}
-response: {"timestamp":"2026-09-25T16:39:46.5747256","status":403,"error":"Forbidden","message":"You can only review your own bookings","path":"/api/reviews"}
+request : {"bookingId":"3127a76f-0d3e-4058-932c-3442727a3386","rating":5,"comment":"not my booking"}
+response: {"timestamp":"2026-09-25T17:13:55.0795194","status":403,"error":"Forbidden","message":"You can only review your own bookings","path":"/api/reviews"}
 
 ### TC-29  GET /api/reviews/station/be28ac01-970d-44de-a02c-8267a58adca8
 expected: 200   actual: 200   -> PASS
@@ -123,59 +123,59 @@ response: {"averageRating":5.0,"count":1,"reviews":[{"id":"b216f8fa-0aa3-452e-a7
 
 ### TC-30  GET /api/notifications/my
 expected: 200   actual: 200   -> PASS
-response: [{"id":"cd7315bf-cf78-4aa2-8347-a175dc555b44","title":"Payment failed","message":"Your payment for Uttara UltraCharge failed and the slot was released.","type":"PAYMENT_FAILED","read":false,"createdAt":"2026-09-25T16:39:46"},{"id":"3c0fd4c0-8d2d-49a1-a796-053e54c6fc7e","title":"Booking confirmed","message":"Uttara UltraCharge · 2026-09-26T10:00 — present your booking reference at the station.",
+response: [{"id":"0c0e1fbd-093e-44d0-82e6-0db1bd75c549","title":"Booking confirmed","message":"Uttara UltraCharge · 2026-09-26T10:00 — present your booking reference at the station.","type":"BOOKING_CONFIRMED","read":false,"createdAt":"2026-09-25T17:13:54"},{"id":"36bc62ba-ca47-4a1f-b2a2-8a5a7597d02d","title":"Payment failed","message":"Your payment for Uttara UltraCharge failed and the slot was released
 
 ### TC-31  GET /api/notifications/unread-count
 expected: 200   actual: 200   -> PASS
-response: {"count":2}
+response: {"count":13}
 
 ### TC-32  PUT /api/notifications/read-all
 expected: 200   actual: 200   -> PASS
-response: {"marked":2}
+response: {"marked":13}
 
 ### TC-33  GET /api/admin/overview
 expected: 403   actual: 403   -> PASS
-response: {"timestamp":"2026-09-25T10:39:47.258Z","status":403,"error":"Forbidden","path":"/api/admin/overview"}
+response: {"timestamp":"2026-09-25T11:13:55.872Z","status":403,"error":"Forbidden","path":"/api/admin/overview"}
 
 ### TC-34  GET /api/admin/overview
 expected: 403   actual: 403   -> PASS
-response: {"timestamp":"2026-09-25T10:39:47.374Z","status":403,"error":"Forbidden","path":"/api/admin/overview"}
+response: {"timestamp":"2026-09-25T11:13:55.986Z","status":403,"error":"Forbidden","path":"/api/admin/overview"}
 
 ### TC-35  GET /api/admin/overview
 expected: 200   actual: 200   -> PASS
-response: {"totalUsers":8,"totalOperators":5,"totalStations":17,"activeStations":17,"totalBookings":53,"totalRevenue":1063.0}
+response: {"totalUsers":8,"totalOperators":5,"totalStations":17,"activeStations":17,"totalBookings":74,"totalRevenue":1338.0}
 
 ### TC-36  GET /api/operator/bookings
 expected: 200   actual: 200   -> PASS
-response: [{"id":"e0938f9e-5167-4d3b-9d96-f5685f87f157","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","vehicleId":"8314fc91-b5d5-44e8-af29-89ef20f4b4ad","stationId":"be28ac01-970d-44de-a02c-8267a58adca8","stationName":"Uttara UltraCharge","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","serviceName":"CHARGING","startTime":"2026-10-03T13:00:00","endTime":"2026-10-03T14:00:00","sta
+response: [{"id":"b85cc1a9-f974-4047-a1c1-89547fc0d5b4","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","stationId":"be28ac01-970d-44de-a02c-8267a58adca8","stationName":"Uttara UltraCharge","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","serviceName":"CHARGING","startTime":"2027-04-04T10:00:00","endTime":"2027-04-04T11:00:00","sta
 
 ### TC-37  POST /api/operator/stations
 expected: 403   actual: 403   -> PASS
 request : {"name":"Illegal station","description":"x","address":"x","latitude":23.7,"longitude":90.4}
-response: {"timestamp":"2026-09-25T10:39:47.907Z","status":403,"error":"Forbidden","path":"/api/operator/stations"}
+response: {"timestamp":"2026-09-25T11:13:56.637Z","status":403,"error":"Forbidden","path":"/api/operator/stations"}
 
 ### TC-38  PUT /api/operator/stations/does-not-exist
 expected: 404   actual: 404   -> PASS
 request : {"name":"x","description":"x","address":"x","latitude":23.7,"longitude":90.4}
-response: {"timestamp":"2026-09-25T16:39:48.043681","status":404,"error":"Not Found","message":"Station not found: does-not-exist","path":"/api/operator/stations/does-not-exist"}
+response: {"timestamp":"2026-09-25T17:13:56.753687","status":404,"error":"Not Found","message":"Station not found: does-not-exist","path":"/api/operator/stations/does-not-exist"}
 
 ### TC-39  POST /api/issues
 expected: 201   actual: 201   -> PASS
 request : {"category":"Bug / crash","subject":"Acceptance test issue","description":"Filed by the automated acceptance suite."}
-response: {"id":"062ea797-166a-4d3c-b154-e08c8905125c","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","userEmail":"test@ev.com","stationId":null,"stationName":null,"category":"Bug / crash","subject":"Acceptance test issue","description":"Filed by the automated acceptance suite.","status":"OPEN","resolutionNote":null,"createdAt":"2026-09-25T16:39:48.1621321","resolvedAt":null}
+response: {"id":"e2c2d8af-0a31-4fe5-bbe6-a005bc757615","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","userEmail":"test@ev.com","stationId":null,"stationName":null,"category":"Bug / crash","subject":"Acceptance test issue","description":"Filed by the automated acceptance suite.","status":"OPEN","resolutionNote":null,"createdAt":"2026-09-25T17:13:56.8901521","resolvedAt":null}
 
 ### TC-40  POST /api/issues
 expected: 400   actual: 400   -> PASS
 request : {"category":"","subject":"","description":""}
-response: {"timestamp":"2026-09-25T16:39:48.3247566","status":400,"error":"Bad Request","message":"description: must not be blank; category: must not be blank; subject: must not be blank","path":"/api/issues"}
+response: {"timestamp":"2026-09-25T17:13:57.0398054","status":400,"error":"Bad Request","message":"description: must not be blank; subject: must not be blank; category: must not be blank","path":"/api/issues"}
 
 ### TC-41  GET /api/admin/issues
 expected: 403   actual: 403   -> PASS
-response: {"timestamp":"2026-09-25T10:39:48.458Z","status":403,"error":"Forbidden","path":"/api/admin/issues"}
+response: {"timestamp":"2026-09-25T11:13:57.170Z","status":403,"error":"Forbidden","path":"/api/admin/issues"}
 
 ### TC-42  GET /api/admin/issues
 expected: 200   actual: 200   -> PASS
-response: [{"id":"062ea797-166a-4d3c-b154-e08c8905125c","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","userEmail":"test@ev.com","stationId":null,"stationName":null,"category":"Bug / crash","subject":"Acceptance test issue","description":"Filed by the automated acceptance suite.","status":"OPEN","resolutionNote":null,"createdAt":"2026-09-25T16:39:48","resolvedAt":null},{"id":"caedbaa
+response: [{"id":"e2c2d8af-0a31-4fe5-bbe6-a005bc757615","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","userEmail":"test@ev.com","stationId":null,"stationName":null,"category":"Bug / crash","subject":"Acceptance test issue","description":"Filed by the automated acceptance suite.","status":"OPEN","resolutionNote":null,"createdAt":"2026-09-25T17:13:56","resolvedAt":null},{"id":"01f398b
 
 ### TC-43  GET /api/fuel-stations
 expected: 200   actual: 200   -> PASS
@@ -183,7 +183,7 @@ response: [{"id":"9353ba9b-9fd7-413e-ade0-d5f77116eeff","name":"Banani Service &
 
 ### TC-44  GET /api/fuel-stations/does-not-exist
 expected: 404   actual: 404   -> PASS
-response: {"timestamp":"2026-09-25T16:39:48.8417152","status":404,"error":"Not Found","message":"Fuel station not found: does-not-exist","path":"/api/fuel-stations/does-not-exist"}
+response: {"timestamp":"2026-09-25T17:13:57.5719663","status":404,"error":"Not Found","message":"Fuel station not found: does-not-exist","path":"/api/fuel-stations/does-not-exist"}
 
 ### TC-45  GET /api/fuel-stations?fuel=LPG&availableOnly=true
 expected: 200   actual: 200   -> PASS
@@ -192,17 +192,17 @@ response: [{"id":"871b20e5-7e56-4c3b-9f2b-3cfff037f361","name":"Padma Filling St
 ### TC-46  PUT /api/operator/fuel-stations/9353ba9b-9fd7-413e-ade0-d5f77116eeff/fuel/LPG
 expected: 403   actual: 403   -> PASS
 request : {"queueCount":1,"remainingLiters":100,"pricePerLiter":70}
-response: {"timestamp":"2026-09-25T10:39:49.112Z","status":403,"error":"Forbidden","path":"/api/operator/fuel-stations/9353ba9b-9fd7-413e-ade0-d5f77116eeff/fuel/LPG"}
+response: {"timestamp":"2026-09-25T11:13:57.838Z","status":403,"error":"Forbidden","path":"/api/operator/fuel-stations/9353ba9b-9fd7-413e-ade0-d5f77116eeff/fuel/LPG"}
 
 ### TC-47  GET /api/news
 expected: 200   actual: 200   -> PASS
 response: [{"id":"1d6bf64f-44fe-48f5-9af0-4f0b86e73a16","title":"Fuel price hike: Who bears the cost? - The Daily Star","link":"https://news.google.com/rss/articles/CBMijgFBVV95cUxPdXJVQnlvTTB4VXhRUHRBZTkxdThGcjNFcmpCa2ZGRlkxQnBlLVdHNjJTd0pabjRpRzZ6RllqdGFTVGZrak56ZGxZQXBOR3NvTEJDaTAzVFhCVk5Jd2dyWFFKRF9RRkI5S0U4dXA1cFQzdUJnWDQ3V3Z2Z2MwZk02d0RuTnROV3JOWVFZS3JB?oc=5","source":"The Daily Star","category":"FUEL
 
-### TC-48  PUT /api/bookings/c4bec944-7f3d-43a2-b0ad-5ba94300a829/cancel
+### TC-48  PUT /api/bookings/3127a76f-0d3e-4058-932c-3442727a3386/cancel
 expected: 200   actual: 200   -> PASS
-response: {"id":"c4bec944-7f3d-43a2-b0ad-5ba94300a829","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","stationId":"be28ac01-970d-44de-a02c-8267a58adca8","stationName":"Uttara UltraCharge","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","serviceName":"CHARGING","startTime":"2026-09-26T10:00:00","endTime":"2026-09-26T11:00:00","stat
+response: {"id":"3127a76f-0d3e-4058-932c-3442727a3386","userId":"f3c1f5a1-a288-452d-9000-a8c70947af3e","userName":"Test User","vehicleId":"583dc060-479e-4498-b110-1d6cdee5e6f6","stationId":"be28ac01-970d-44de-a02c-8267a58adca8","stationName":"Uttara UltraCharge","serviceId":"d848e542-1022-4d75-b6a3-7af48640cd71","serviceName":"CHARGING","startTime":"2026-09-26T10:00:00","endTime":"2026-09-26T11:00:00","stat
 
-### TC-49  PUT /api/bookings/c4bec944-7f3d-43a2-b0ad-5ba94300a829/cancel
+### TC-49  PUT /api/bookings/3127a76f-0d3e-4058-932c-3442727a3386/cancel
 expected: 400   actual: 400   -> PASS
-response: {"timestamp":"2026-09-25T16:39:49.5290029","status":400,"error":"Bad Request","message":"Only pending or confirmed bookings can be cancelled","path":"/api/bookings/c4bec944-7f3d-43a2-b0ad-5ba94300a829/cancel"}
+response: {"timestamp":"2026-09-25T17:13:58.2633912","status":400,"error":"Bad Request","message":"Only pending or confirmed bookings can be cancelled","path":"/api/bookings/3127a76f-0d3e-4058-932c-3442727a3386/cancel"}
 

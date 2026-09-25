@@ -384,6 +384,7 @@ deliberately left out to keep a single source of truth.
 | Document | What's inside |
 |---|---|
 | [`docs/Spring_Boot_Project_Report.md`](docs/Spring_Boot_Project_Report.md) | **Submission report** in the CSE 2118 template — architecture, implementation, endpoint reference, database config, 49-case test results, challenges, conclusion |
+| [`docs/figures/`](docs/figures) | Report diagrams as SVG: `figure1-architecture.svg` (layered architecture) and `figure-results.svg` (test results chart) |
 | [`docs/HOW-TO-SCREENSHOTS.md`](docs/HOW-TO-SCREENSHOTS.md) | Step-by-step guide to capturing the Section 8 test screenshots (Postman import, run order, which request maps to which figure) |
 | [`docs/EV-Finder.postman_collection.json`](docs/EV-Finder.postman_collection.json) | Importable Postman collection — 9 folders, 47 requests with assertions; run the logins + Setup once and the rest authenticate automatically |
 | [`docs/run-api-tests.sh`](docs/run-api-tests.sh) | 50-case automated acceptance suite (curl); prints a markdown results table and writes `docs/test-evidence.log` |

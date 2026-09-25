@@ -18,11 +18,10 @@ body:
 scripts:
   - type: beforeRequest
     code: |-
-      // Fail with a readable message instead of sending a literal {{payOkBookingId}},
-      // which would come back as a confusing 404.
       const id = pm.collectionVariables.get('payOkBookingId');
-      if (!id) {
-          console.error('TC-25: payOkBookingId is empty — run "TC-25" first');
+      const usable = typeof id === 'string' && id.length >= 32;
+      if (!usable) {
+          console.error('TC-25: payOkBookingId is "' + id + '" — run "Setup: create booking to pay" first');
           pm.collectionVariables.set('payOkBookingId', 'missing-run-the-setup-request-first');
       }
     language: text/javascript

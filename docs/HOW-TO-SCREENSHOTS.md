@@ -94,15 +94,28 @@ the status code is the most common reason marks are lost.
 |---|---|
 | Figure 4 | `1. Auth` → **TC-01 Login as USER (200)** |
 | Figure 5 | `5. Bookings` → **TC-16 POST /api/bookings (201)** |
-| Figure 6 | `5. Bookings` → **TC-24 Capacity exceeded (409)** — to see the 409 you must first press Send on the three **Fill capacity** requests above it |
+| Figure 6 | `5. Bookings` → three **Fill capacity** requests, then **TC-24 Capacity exceeded (409)** |
 | Figure 7 | `6. Payment` → **Setup: create booking to pay**, then **TC-25 Pay a booking — SUCCESS** |
 | Figure 8 | `6. Payment` → **Setup: create booking for forced failure**, then **TC-26 Forced failure — FAILED** |
 | Figure 9 | `4. Stations & availability` → **TC-13 GET unknown station (404)** |
 | Figure 10 | `7. Security (401 / 403)` → **TC-33 USER calling admin endpoint (403)** |
 | Figure 11 | `7. Security (401 / 403)` → **TC-03 GET /api/users/me without token (401)** |
+| Figure 12 | The Collection Runner results grid (47 requests, 0 failures) |
+| Figure 14 | The Android app's Home screen with the backend running |
 
-Every request has an assertion, so the **Test Results** tab (next to Body in the response pane) also
-shows a green PASS — a second screenshot per case is optional but strengthens the evidence.
+Two figures are **already produced as SVG files** — no screenshot needed, just insert the image:
+
+| Figure | File | What to do |
+|---|---|---|
+| Figure 1 | `docs/figures/figure1-architecture.svg` | Open in a browser and copy it, or `rsvg-convert -o figure1.png docs/figures/figure1-architecture.svg` |
+| Figure 13 | `docs/figures/figure-results.svg` | Same — it is the results diagram built from the verified numbers |
+
+Two more come from outside Postman:
+
+| Figure | Where |
+|---|---|
+| Figure 2 | The terminal running `mvnw spring-boot:run`, showing `Tomcat started on port 8080` |
+| Figure 3 | Browser → <http://localhost/phpmyadmin> → `ev_finder` → open the `bookings` table |
 
 ### A7. Two screenshots that don't come from Postman
 

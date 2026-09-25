@@ -1,56 +1,57 @@
 $kind: collection
-description: |-
-  Acceptance tests for the EV Charging & Battery-Swap Finder backend.
+description: |
+  ACCEPTANCE TESTS — EV Charging & Battery-Swap Finder backend (CSE 2118)
 
   =====================================================
   RUN EVERYTHING AT ONCE (Collection Runner)
   =====================================================
-  1. Start MySQL (XAMPP) and the backend, then confirm it answers:
-     http://localhost:8080/api/stations  ->  401
-  2. Hover the collection name in the sidebar -> '...' (More actions) -> 'Run collection'.
-     (Older Postman: click the collection, then the 'Run' button on the Overview tab.)
-  3. Leave the settings as they are: Iterations = 1, Delay = 0, order = the folder order.
-     Do NOT reorder — folder 1 saves the JWTs and folder 2 saves the ids that every
-     later request needs.
-  4. Tick 'Save responses' if you want to click into each response afterwards.
-  5. Press 'Run EV Finder - CSE 2118 Project Tests'.
-  6. Read the results: each request shows PASS/FAIL, status code, time and size.
-     Expect 0 failures. Click any row in 'Run Results' to open that request again.
+  1. Start MySQL (XAMPP) and the backend REBUILT FROM THE CURRENT SOURCE, then check:
+       http://localhost:8080/api/stations   ->   401 Unauthorized
+  2. Hover the collection name -> '...' (More actions) -> 'Run collection'.
+     (Older Postman: open the collection and press 'Run' on the Overview tab.)
+  3. Keep the defaults: Iterations 1, Delay 0, and the folder order unchanged.
+  4. Press Run. Expect 0 failures across 47 requests.
+  5. Folder 9 (Teardown) deletes the test vehicles — untick it to inspect them instead.
 
-  Folder 9 (Teardown) is optional cleanup — it deletes test vehicles. Include it for a
-  tidy database, or untick it if you want to inspect the created vehicle afterwards.
+  The folder order matters and is already correct: folder 1 saves the JWTs, folder 2 saves the
+  ids every later request needs, and folder 7 (Security) runs after folder 5 because TC-23
+  needs a booking to exist. No request relies on asynchronous code — an earlier version
+  created bookings in a pre-request script with pm.sendRequest, whose callback can fire after
+  the request has been sent in the Runner, leaving the variable empty and producing a 404.
 
   =====================================================
-  TAKING THE SECTION 8 SCREENSHOTS
+  SETUP REQUESTS (already positioned for you)
   =====================================================
-  The Runner proves the suite passes, but the report needs screenshots showing the
-  method, URL, request body and status code. For those, run the individual requests:
+    Fill capacity 1 / 2 / 3                  (folder 5) -> makes TC-24 return 409
+    Setup: create booking to pay             (folder 6) -> a fresh unpaid booking for TC-25
+    Setup: create booking for forced failure (folder 6) -> the same for TC-26
 
-  1. Run the three logins in folder 1, then the three requests in folder 2 (Setup) -
-     their test scripts store the token and ids in collection variables.
-  2. Open the request you need, click the 'Body' tab in the REQUEST pane so the JSON is
-     visible, press Send, then screenshot the whole window (status code is top-right of
-     the response pane).
+  TC-16 and both setup requests pick a RANDOM future window, so repeated runs never collide
+  with slots an earlier run already occupied.
+
+  =====================================================
+  SECTION 8 SCREENSHOTS
+  =====================================================
+  The Runner proves the suite passes; the report needs screenshots showing the method, URL,
+  request body and status code. For those, run the individual requests:
+  1. Run the three logins (folder 1) and the three Setup requests (folder 2). For a payment
+     figure, also run the matching 'Setup: create booking...' request directly above it.
+  2. Open the request, click the 'Body' tab in the REQUEST pane so the JSON is visible,
+     press Send, then screenshot the window (the status code is top-right of the response).
   3. Figure-to-request mapping is in docs/HOW-TO-SCREENSHOTS.md.
 
   =====================================================
-  NOTES
+  IF SOMETHING FAILS
   =====================================================
-  - Collection variable 'baseUrl' defaults to http://localhost:8080.
-  - Folders are ordered so that state is created before it is used, and no request relies
-    on asynchronous code (a pre-request script that awaits an HTTP call can fire after the
-    request in the Runner). Instead:
-      * Folder 5 holds three explicit 'Fill capacity' requests before TC-24, so the window
-        really is full and 409 is guaranteed.
-      * Folder 6 places 'Setup: create booking to pay' before TC-25 and
-        'Setup: create booking for forced failure' before TC-26, because a booking can only
-        be paid once and each payment case needs its own.
-      * TC-16 and the two setup requests pick a RANDOM future window, so repeated runs never
-        collide with slots a previous run already occupied.
-      * TC-23 lives in folder 7 because it needs a booking to exist (created in folder 5).
-  - Open the Postman Console (bottom-left) to see what each script did.
-  - To start completely fresh: Collection -> Variables -> Reset All, then re-run
-    folders 1 and 2.
+  - Open the Postman Console (bottom-left) first: every script logs what it did.
+  - Many 401s or 'missing variable' -> you started past folder 2; run from the top.
+  - TC-25 / TC-26 404 -> run the matching 'Setup: create booking...' request above it.
+  - TC-50 500 -> your backend predates the vehicle delete-guard fix; rebuild and restart.
+  - To start fresh: Collection -> Variables -> Reset All, then re-run folders 1 and 2.
+
+  A standalone validator that runs this whole collection outside Postman (and catches the
+  class of script bug described above) is in docs/validate_collection.js:
+       node docs/validate_collection.js http://localhost:8080
 variables:
   baseUrl: http://localhost:8080
   userToken: ""
@@ -68,3 +69,7 @@ variables:
   createdVehicleId: ""
   bkStart: ""
   bkEnd: ""
+  payOkBookingId_start: ""
+  payOkBookingId_end: ""
+  failBookingId_start: ""
+  failBookingId_end: ""
