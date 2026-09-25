@@ -8,6 +8,10 @@ from. **There are two routes — you can use either, or both.**
 - **Route B — the terminal (fastest).** One screenshot of the test script output covers the whole
   results table, and the evidence log already contains every request/response pair as text.
 
+> Running the **whole collection in one pass** (Collection Runner) is covered in
+> [A0](#a0-running-the-whole-collection-at-once-collection-runner). The same instructions are
+> embedded in the collection's own description, so you can read them inside Postman.
+
 ---
 
 ## Before you start (both routes)
@@ -106,6 +110,66 @@ shows a green PASS — a second screenshot per case is optional but strengthens 
 |---|---|
 | Figure 2 — application started | The terminal window running `mvnw spring-boot:run`, showing `Tomcat started on port 8080` |
 | Figure 3 — database tables | Browser → <http://localhost/phpmyadmin> → database `ev_finder` → open the `bookings` table so rows are visible |
+
+---
+
+## A0. Running the whole collection at once (Collection Runner)
+
+Use this to prove all 41 requests pass in one go. For the report's figures you still need the
+individual requests from A5 — the Runner is for the pass/fail evidence, not for the screenshots.
+
+1. **Start the stack first.** MySQL (XAMPP) and the backend, then confirm the API answers:
+   ```bash
+   curl -i http://localhost:8080/api/stations      # expect 401 Unauthorized
+   ```
+2. **Hover the collection name** in the left sidebar → click **⋯** (More actions) → **Run collection**.
+   In older versions, click the collection and press **Run** on the Overview tab.
+3. **Keep the defaults:** Iterations `1`, Delay `0`. **Do not reorder the folders** — folder 1 saves
+   the JWTs and folder 2 saves the station/service/vehicle ids that every later request depends on.
+   Running out of order is the single most common cause of failures.
+4. Optionally tick **Save responses** so you can open each response body afterwards.
+5. Press **Run EV Finder — CSE 2118 Project Tests**.
+6. Read the results table: every request shows **PASS/FAIL**, the status code, time and size.
+   Expect **0 failures**. Click any row to reopen that request.
+
+**Worked example — what a clean run looks like:**
+
+```
+Folder                        Requests   Failures
+1. Auth                          5          0
+2. Setup (run once, saves ids)    3          0
+3. Security (401 / 403)          5          0
+4. Vehicles (CRUD + 404)         5          0
+5. Stations & availability       5          0
+6. Bookings (create/conflict)    7          0
+7. Payment (simulated)           3          0
+8. Reviews, notifs, issues…      7          0
+9. Teardown (optional cleanup)   1          0
+                                ──         ──
+                                41          0
+```
+
+Folder **9. Teardown** deletes the test vehicles. Untick it if you want to inspect the created
+vehicle afterwards, or run it later on its own.
+
+### Exporting the run results (optional extra evidence)
+
+In the Runner, after the run finishes: **Export Results** → save the JSON, or **Ctrl+P** the results
+pane to PDF. Both are legitimate evidence, but they do *not* replace the Figure 4–11 screenshots,
+because they do not show the request body.
+
+### If a request fails in the Runner
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Many failures at once, all `401` or "missing variable" | Folders ran out of order, or you started at folder 3+ | Run again from the top, or run folders 1 and 2 first |
+| `TC-06` → `409` | A vehicle with that registration number survived an earlier run (the column is globally unique) | Now impossible: TC-06 generates a unique number and sweeps leftovers. If you still see it, your imported collection is the older copy — re-import |
+| `TC-24` → `201` | The service was not full | The pre-request script fills it. Check the Console line `TC-24: window full after N booking(s)` |
+| `TC-26` → `400 "already paid"` | It reused a booking TC-25 had paid | Fixed: TC-26 creates its own unpaid booking. Re-import if you see this |
+| `TC-50` → `500` | Your backend predates the delete-guard fix | Rebuild and restart the backend |
+| `TC-23` → `404` | No booking id and the user has no bookings | Run folder 6 (TC-16) first, or let the pre-request script find one |
+
+Open the **Postman Console** (bottom-left → Console) to see exactly what each pre-request script did.
 
 ---
 

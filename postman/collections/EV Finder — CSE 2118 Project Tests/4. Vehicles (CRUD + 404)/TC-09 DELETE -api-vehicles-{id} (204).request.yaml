@@ -1,0 +1,18 @@
+$kind: http-request
+name: TC-09 DELETE /api/vehicles/{id} (204)
+description: |-
+  Expected 204 No Content with an empty body.
+
+  Deletes the vehicle TC-06 created, so a normal run leaves the garage as it found it.
+url: "{{baseUrl}}/api/vehicles/{{createdVehicleId}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-09 status is 204', () => pm.response.to.have.status(204));
+      pm.collectionVariables.set('createdVehicleId', '');
+    language: text/javascript
+order: 4000

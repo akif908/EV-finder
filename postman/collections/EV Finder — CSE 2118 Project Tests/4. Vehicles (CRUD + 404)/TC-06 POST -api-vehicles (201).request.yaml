@@ -1,5 +1,9 @@
 $kind: http-request
 name: TC-06 POST /api/vehicles (201)
+description: |-
+  Expected 201 Created.
+
+  The registration number is generated fresh for each run and any leftover TST-* vehicle is removed first, so repeated runs no longer collide (that column is globally unique).
 url: "{{baseUrl}}/api/vehicles"
 method: POST
 headers:
@@ -14,10 +18,43 @@ body:
       "vehicleType": "ELECTRIC_CAR",
       "connectorType": "CCS2",
       "batteryCapacityKwh": 60,
-      "registrationNo": "TST-AC-001"
+      "registrationNo": "{{testRegNo}}"
     }
 scripts:
+  - type: beforeRequest
+    code: |-
+      // TC-06 used to fail with 409 on a second run: the registration number was
+      // fixed ('TST-AC-001') and that column is GLOBALLY unique, so the row created
+      // by the previous run still occupied it.
+      //
+      // Two safeguards:
+      //   1. a fresh registration number for every run, so a collision is
+      //      impossible even if cleanup never happens;
+      //   2. best-effort deletion of leftover TST-* vehicles so the garage does
+      //      not accumulate test data.
+      const base = pm.collectionVariables.get('baseUrl');
+      const auth = { 'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') };
+
+      pm.collectionVariables.set('testRegNo', 'TST-' + Date.now().toString().slice(-8));
+
+      pm.sendRequest({ url: base + '/api/vehicles/my', method: 'GET', header: auth }, (err, res) => {
+          const list = res && res.json ? res.json() : [];
+          const stale = (Array.isArray(list) ? list : [])
+              .filter(v => (v.registrationNo || '').toUpperCase().startsWith('TST-'));
+          console.log('TC-06: registration for this run = ' + pm.collectionVariables.get('testRegNo'));
+          console.log('TC-06: deleting ' + stale.length + ' leftover test vehicle(s)');
+          stale.forEach(v => {
+              pm.sendRequest({ url: base + '/api/vehicles/' + v.id, method: 'DELETE', header: auth },
+                  () => {});
+          });
+      });
+    language: text/javascript
   - type: afterResponse
-    code: pm.test('TC-06 status is 201', () => pm.response.to.have.status(201));
+    code: |-
+      pm.test('TC-06 status is 201', () => pm.response.to.have.status(201));
+      const v = pm.response.json();
+      pm.test('registration number is the unique test value',
+          () => pm.expect(v.registrationNo).to.eql(pm.collectionVariables.get('testRegNo')));
+      pm.collectionVariables.set('createdVehicleId', v.id);
     language: text/javascript
 order: 1000

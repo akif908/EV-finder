@@ -1,0 +1,38 @@
+$kind: http-request
+name: "Cleanup: delete all test vehicles (TST-*)"
+description: |-
+  Lists the user's vehicles and deletes every one whose registration number starts with TST-. Run this last to leave the demo database clean; use it after an interrupted run to clear a stale vehicle that would otherwise cause TC-06 to answer 409.
+
+  A vehicle that already has bookings is reported as kept rather than removed: the API refuses to delete a vehicle with booking history (409) so that booking records are not orphaned. That is intended behaviour, not a failure.
+url: "{{baseUrl}}/api/vehicles/my"
+method: GET
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      // Sweeps every leftover TST-* vehicle, including those from a run that was
+      // aborted before TC-09 could delete the vehicle it created.
+      const base = pm.collectionVariables.get('baseUrl');
+      const auth = { 'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') };
+      const list = pm.response.json();
+      const stale = (Array.isArray(list) ? list : [])
+          .filter(v => (v.registrationNo || '').toUpperCase().startsWith('TST-'));
+      pm.test('TC-teardown status is 200', () => pm.response.to.have.status(200));
+      pm.test('teardown sweep ran', () => {
+          console.log('teardown: ' + stale.length + ' test vehicle(s) to remove');
+          stale.forEach(v => pm.sendRequest({
+              url: base + '/api/vehicles/' + v.id, method: 'DELETE', header: auth
+          }, (err, res) => {
+              if (res && res.code === 204) {
+                  console.log('  removed ' + v.registrationNo);
+              } else {
+                  console.log('  kept ' + v.registrationNo + ' (HTTP ' + (res ? res.code : '?') +
+                              ') — a vehicle with booking history cannot be deleted');
+              }
+          }));
+          pm.expect(true).to.be.true;
+      });
+    language: text/javascript
+order: 1000

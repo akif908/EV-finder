@@ -1,4 +1,8 @@
 $kind: http-request
+description: |-
+  Saves the vehicle id used by the booking and payment cases.
+
+  Deliberately prefers a non-test vehicle: bookings attached to a TST-* vehicle would make it undeletable, since the API refuses to delete a vehicle that has booking history (409).
 url: "{{baseUrl}}/api/vehicles/my"
 method: GET
 headers:
@@ -7,8 +11,15 @@ headers:
 scripts:
   - type: afterResponse
     code: |-
+      // Pick a vehicle that is NOT test data. A booking attached to a TST-*
+      // vehicle makes that vehicle undeletable (the API answers 409 for a
+      // vehicle with booking history), which is what left stale rows behind.
       const list = pm.response.json();
-      pm.test('at least one vehicle exists', () => pm.expect(list.length).to.be.above(0));
-      pm.collectionVariables.set('vehicleId', list[0].id);
+      const all = Array.isArray(list) ? list : [];
+      pm.test('at least one vehicle exists', () => pm.expect(all.length).to.be.above(0));
+      const real = all.filter(v => !(v.registrationNo || '').toUpperCase().startsWith('TST-'));
+      const pick = real[0] || all[0];
+      pm.collectionVariables.set('vehicleId', pick ? pick.id : '');
+      console.log('setup: bookings will use vehicle ' + (pick ? pick.registrationNo : 'none'));
     language: text/javascript
 order: 2000

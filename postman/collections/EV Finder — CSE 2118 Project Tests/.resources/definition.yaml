@@ -26,3 +26,5 @@ variables:
   slotDate: ""
   payOkBookingId: ""
   failBookingId: ""
+  testRegNo: ""
+  createdVehicleId: ""

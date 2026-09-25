@@ -1,0 +1,3 @@
+$kind: collection
+description: Removes test data this collection creates. Run it last. Safe to run any number of times.
+order: 9000
