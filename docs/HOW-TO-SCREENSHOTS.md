@@ -93,13 +93,13 @@ the status code is the most common reason marks are lost.
 | Figure | Folder → request |
 |---|---|
 | Figure 4 | `1. Auth` → **TC-01 Login as USER (200)** |
-| Figure 5 | `6. Bookings` → **TC-16 POST /api/bookings (201)** |
-| Figure 6 | `6. Bookings` → **TC-24 Capacity exceeded (409)** — just press Send (it fills capacity itself, see below) |
-| Figure 7 | `7. Payment` → **TC-25 Pay a booking — SUCCESS** |
-| Figure 8 | `7. Payment` → **TC-26 Forced failure — FAILED** |
-| Figure 9 | `5. Stations & availability` → **TC-13 GET unknown station (404)** |
-| Figure 10 | `3. Security (401 / 403)` → **TC-33 USER calling admin endpoint (403)** |
-| Figure 11 | `3. Security (401 / 403)` → **TC-03 GET /api/users/me without token (401)** |
+| Figure 5 | `5. Bookings` → **TC-16 POST /api/bookings (201)** |
+| Figure 6 | `5. Bookings` → **TC-24 Capacity exceeded (409)** — to see the 409 you must first press Send on the three **Fill capacity** requests above it |
+| Figure 7 | `6. Payment` → **Setup: create booking to pay**, then **TC-25 Pay a booking — SUCCESS** |
+| Figure 8 | `6. Payment` → **Setup: create booking for forced failure**, then **TC-26 Forced failure — FAILED** |
+| Figure 9 | `4. Stations & availability` → **TC-13 GET unknown station (404)** |
+| Figure 10 | `7. Security (401 / 403)` → **TC-33 USER calling admin endpoint (403)** |
+| Figure 11 | `7. Security (401 / 403)` → **TC-03 GET /api/users/me without token (401)** |
 
 Every request has an assertion, so the **Test Results** tab (next to Body in the response pane) also
 shows a green PASS — a second screenshot per case is optional but strengthens the evidence.
@@ -118,7 +118,8 @@ shows a green PASS — a second screenshot per case is optional but strengthens 
 Use this to prove all 41 requests pass in one go. For the report's figures you still need the
 individual requests from A5 — the Runner is for the pass/fail evidence, not for the screenshots.
 
-1. **Start the stack first.** MySQL (XAMPP) and the backend, then confirm the API answers:
+1. **Start the stack first.** MySQL (XAMPP) and the backend — rebuilt from the current source, see
+   the note below — then confirm the API answers:
    ```bash
    curl -i http://localhost:8080/api/stations      # expect 401 Unauthorized
    ```
@@ -135,19 +136,28 @@ individual requests from A5 — the Runner is for the pass/fail evidence, not fo
 **Worked example — what a clean run looks like:**
 
 ```
-Folder                        Requests   Failures
-1. Auth                          5          0
-2. Setup (run once, saves ids)    3          0
-3. Security (401 / 403)          5          0
-4. Vehicles (CRUD + 404)         5          0
-5. Stations & availability       5          0
-6. Bookings (create/conflict)    7          0
-7. Payment (simulated)           3          0
-8. Reviews, notifs, issues…      7          0
-9. Teardown (optional cleanup)   1          0
-                                ──         ──
-                                41          0
+Folder                                    Requests   Failures
+1. Auth                                      5          0
+2. Setup (run once, saves ids)               3          0
+3. Vehicles (CRUD + 404)                     5          0
+4. Stations & availability                   5          0
+5. Bookings (create / limits / conflict)    10          0
+6. Payment (simulated)                       5          0
+7. Security (401 / 403)                      5          0
+8. Reviews, notifications, issues, fuel…     7          0
+9. Teardown (optional cleanup)               1          0
+                                           ──         ──
+                                           46          0
 ```
+
+Two folders contain **setup requests** that must run before the case they support — they are
+already in the right position, so a top-to-bottom run needs no thought:
+
+| Setup request | Supports | Why |
+|---|---|---|
+| `Fill capacity 1/2/3` (folder 5) | TC-24 → 409 | Takes every slot in the 05:00–06:00 window. With a capacity of 2 the window is certainly full, so the next booking must be refused. On later runs they simply report 409, which is still correct. |
+| `Setup: create booking to pay` (folder 6) | TC-25 → SUCCESS | A booking can only be paid **once**, so this case needs its own unused booking. |
+| `Setup: create booking for forced failure` (folder 6) | TC-26 → FAILED | Same reason, and it must not touch the booking TC-25 paid. |
 
 Folder **9. Teardown** deletes the test vehicles. Untick it if you want to inspect the created
 vehicle afterwards, or run it later on its own.
@@ -164,8 +174,9 @@ because they do not show the request body.
 |---|---|---|
 | Many failures at once, all `401` or "missing variable" | Folders ran out of order, or you started at folder 3+ | Run again from the top, or run folders 1 and 2 first |
 | `TC-06` → `409` | A vehicle with that registration number survived an earlier run (the column is globally unique) | Now impossible: TC-06 generates a unique number and sweeps leftovers. If you still see it, your imported collection is the older copy — re-import |
-| `TC-24` → `201` | The service was not full | The pre-request script fills it. Check the Console line `TC-24: window full after N booking(s)` |
-| `TC-26` → `400 "already paid"` | It reused a booking TC-25 had paid | Fixed: TC-26 creates its own unpaid booking. Re-import if you see this |
+| `TC-24` → `201` | The service is not full, so the booking is legitimately accepted | Run the three **Fill capacity** requests above TC-24 first (a top-to-bottom run does this for you) |
+| `TC-25` or `TC-26` → `404` | The payment URL still held the literal `{{payOkBookingId}}` / `{{failBookingId}}` because nothing had set it | Run the matching `Setup: create booking…` request immediately above the case. A top-to-bottom run does this automatically |
+| `TC-26` → `400 "already paid"` | It was pointed at a booking TC-25 had paid | Fixed by the dedicated setup request. Re-import if you still see this |
 | `TC-50` → `500` | Your backend predates the delete-guard fix | Rebuild and restart the backend |
 | `TC-23` → `404` | No booking id and the user has no bookings | Run folder 6 (TC-16) first, or let the pre-request script find one |
 

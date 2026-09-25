@@ -2,7 +2,7 @@
   "info": {
     "name": "EV Finder \u2014 CSE 2118 Project Tests",
     "_postman_id": "b7f1c2a4-9d3e-4a51-8f60-2c7e5b91a001",
-    "description": "Acceptance tests for the EV Charging & Battery-Swap Finder backend.\n\n=====================================================\nRUN EVERYTHING AT ONCE (Collection Runner)\n=====================================================\n1. Start MySQL (XAMPP) and the backend, then confirm it answers:\n   http://localhost:8080/api/stations  ->  401\n2. Hover the collection name in the sidebar -> '...' (More actions) -> 'Run collection'.\n   (Older Postman: click the collection, then the 'Run' button on the Overview tab.)\n3. Leave the settings as they are: Iterations = 1, Delay = 0, order = the folder order.\n   Do NOT reorder \u2014 folder 1 saves the JWTs and folder 2 saves the ids that every\n   later request needs.\n4. Tick 'Save responses' if you want to click into each response afterwards.\n5. Press 'Run EV Finder - CSE 2118 Project Tests'.\n6. Read the results: each request shows PASS/FAIL, status code, time and size.\n   Expect 0 failures. Click any row in 'Run Results' to open that request again.\n\nFolder 9 (Teardown) is optional cleanup \u2014 it deletes test vehicles. Include it for a\ntidy database, or untick it if you want to inspect the created vehicle afterwards.\n\n=====================================================\nTAKING THE SECTION 8 SCREENSHOTS\n=====================================================\nThe Runner proves the suite passes, but the report needs screenshots showing the\nmethod, URL, request body and status code. For those, run the individual requests:\n\n1. Run the three logins in folder 1, then the three requests in folder 2 (Setup) -\n   their test scripts store the token and ids in collection variables.\n2. Open the request you need, click the 'Body' tab in the REQUEST pane so the JSON is\n   visible, press Send, then screenshot the whole window (status code is top-right of\n   the response pane).\n3. Figure-to-request mapping is in docs/HOW-TO-SCREENSHOTS.md.\n\n=====================================================\nNOTES\n=====================================================\n- Collection variable 'baseUrl' defaults to http://localhost:8080.\n- Requests that depend on server state set it up themselves in pre-request scripts:\n  TC-23 finds a booking to be forbidden from, TC-24 fills a window until the service\n  reports 409, and TC-25/TC-26 create their own unpaid bookings (a booking can only be\n  paid once).\n- Open the Postman Console (bottom-left) to see what each script did.\n- To start completely fresh: Collection -> Variables -> Reset All, then re-run\n  folders 1 and 2.",
+    "description": "Acceptance tests for the EV Charging & Battery-Swap Finder backend.\n\n=====================================================\nRUN EVERYTHING AT ONCE (Collection Runner)\n=====================================================\n1. Start MySQL (XAMPP) and the backend, then confirm it answers:\n   http://localhost:8080/api/stations  ->  401\n2. Hover the collection name in the sidebar -> '...' (More actions) -> 'Run collection'.\n   (Older Postman: click the collection, then the 'Run' button on the Overview tab.)\n3. Leave the settings as they are: Iterations = 1, Delay = 0, order = the folder order.\n   Do NOT reorder \u2014 folder 1 saves the JWTs and folder 2 saves the ids that every\n   later request needs.\n4. Tick 'Save responses' if you want to click into each response afterwards.\n5. Press 'Run EV Finder - CSE 2118 Project Tests'.\n6. Read the results: each request shows PASS/FAIL, status code, time and size.\n   Expect 0 failures. Click any row in 'Run Results' to open that request again.\n\nFolder 9 (Teardown) is optional cleanup \u2014 it deletes test vehicles. Include it for a\ntidy database, or untick it if you want to inspect the created vehicle afterwards.\n\n=====================================================\nTAKING THE SECTION 8 SCREENSHOTS\n=====================================================\nThe Runner proves the suite passes, but the report needs screenshots showing the\nmethod, URL, request body and status code. For those, run the individual requests:\n\n1. Run the three logins in folder 1, then the three requests in folder 2 (Setup) -\n   their test scripts store the token and ids in collection variables.\n2. Open the request you need, click the 'Body' tab in the REQUEST pane so the JSON is\n   visible, press Send, then screenshot the whole window (status code is top-right of\n   the response pane).\n3. Figure-to-request mapping is in docs/HOW-TO-SCREENSHOTS.md.\n\n=====================================================\nNOTES\n=====================================================\n- Collection variable 'baseUrl' defaults to http://localhost:8080.\n- Folders are ordered so that state is created before it is used, and no request relies\n  on asynchronous code (a pre-request script that awaits an HTTP call can fire after the\n  request in the Runner). Instead:\n    * Folder 5 holds three explicit 'Fill capacity' requests before TC-24, so the window\n      really is full and 409 is guaranteed.\n    * Folder 6 places 'Setup: create booking to pay' before TC-25 and\n      'Setup: create booking for forced failure' before TC-26, because a booking can only\n      be paid once and each payment case needs its own.\n    * TC-16 and the two setup requests pick a RANDOM future window, so repeated runs never\n      collide with slots a previous run already occupied.\n    * TC-23 lives in folder 7 because it needs a booking to exist (created in folder 5).\n- Open the Postman Console (bottom-left) to see what each script did.\n- To start completely fresh: Collection -> Variables -> Reset All, then re-run\n  folders 1 and 2.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -60,6 +60,14 @@
     },
     {
       "key": "createdVehicleId",
+      "value": ""
+    },
+    {
+      "key": "bkStart",
+      "value": ""
+    },
+    {
+      "key": "bkEnd",
       "value": ""
     }
   ],
@@ -398,227 +406,7 @@
       ]
     },
     {
-      "name": "3. Security (401 / 403)",
-      "item": [
-        {
-          "name": "TC-03 GET /api/users/me without token (401)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('TC-03 status is 401', () => pm.response.to.have.status(401));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/users/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "me"
-              ]
-            }
-          }
-        },
-        {
-          "name": "TC-04 GET /api/users/me with token (200)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('TC-04 status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('email matches', () => pm.expect(pm.response.json().email).to.eql('test@ev.com'));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/users/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "me"
-              ]
-            }
-          }
-        },
-        {
-          "name": "TC-33 USER calling admin endpoint (403)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('TC-33 status is 403', () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/overview",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "overview"
-              ]
-            }
-          }
-        },
-        {
-          "name": "TC-35 ADMIN calling admin endpoint (200)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('TC-35 status is 200', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/overview",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "overview"
-              ]
-            }
-          }
-        },
-        {
-          "name": "TC-23 Other user's booking (403)",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// TC-23 needs a booking owned by the USER, not the operator.",
-                  "// If none is stored yet, take the user's most recent booking so the request",
-                  "// also works when run straight after the logins.",
-                  "const base = pm.collectionVariables.get('baseUrl');",
-                  "if (!pm.collectionVariables.get('bookingId')) {",
-                  "    pm.sendRequest({",
-                  "        url: base + '/api/bookings/my',",
-                  "        method: 'GET',",
-                  "        header: { 'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') }",
-                  "    }, (err, res) => {",
-                  "        const list = res && res.json ? res.json() : [];",
-                  "        if (Array.isArray(list) && list.length) {",
-                  "            pm.collectionVariables.set('bookingId', list[0].id);",
-                  "            console.log('TC-23: using booking ' + list[0].id + ' owned by the user');",
-                  "        } else {",
-                  "            console.log('TC-23: no bookings found \u2014 run folder 6, TC-16 first');",
-                  "        }",
-                  "    });",
-                  "}"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('TC-23 status is 403', () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{operatorToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings",
-                "{{bookingId}}"
-              ]
-            },
-            "description": "Expected 403 Forbidden: the operator is authenticated but does not own this booking.\n\nSelf-contained \u2014 if no bookingId is stored, the pre-request script picks one of the user's existing bookings. Ownership is checked before status, so this returns 403 even for a cancelled booking. Needs the user and operator tokens from folder 1."
-          }
-        }
-      ]
-    },
-    {
-      "name": "4. Vehicles (CRUD + 404)",
+      "name": "3. Vehicles (CRUD + 404)",
       "item": [
         {
           "name": "TC-06 POST /api/vehicles (201)",
@@ -628,31 +416,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// TC-06 used to fail with 409 on a second run: the registration number was",
-                  "// fixed ('TST-AC-001') and that column is GLOBALLY unique, so the row created",
-                  "// by the previous run still occupied it.",
-                  "//",
-                  "// Two safeguards:",
-                  "//   1. a fresh registration number for every run, so a collision is",
-                  "//      impossible even if cleanup never happens;",
-                  "//   2. best-effort deletion of leftover TST-* vehicles so the garage does",
-                  "//      not accumulate test data.",
-                  "const base = pm.collectionVariables.get('baseUrl');",
-                  "const auth = { 'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') };",
-                  "",
+                  "// A fresh registration number per run. registration_no is GLOBALLY unique,",
+                  "// so a fixed value made a second run fail with 409 against the row left by",
+                  "// the previous run. This is pure computation, so it is always safe.",
                   "pm.collectionVariables.set('testRegNo', 'TST-' + Date.now().toString().slice(-8));",
-                  "",
-                  "pm.sendRequest({ url: base + '/api/vehicles/my', method: 'GET', header: auth }, (err, res) => {",
-                  "    const list = res && res.json ? res.json() : [];",
-                  "    const stale = (Array.isArray(list) ? list : [])",
-                  "        .filter(v => (v.registrationNo || '').toUpperCase().startsWith('TST-'));",
-                  "    console.log('TC-06: registration for this run = ' + pm.collectionVariables.get('testRegNo'));",
-                  "    console.log('TC-06: deleting ' + stale.length + ' leftover test vehicle(s)');",
-                  "    stale.forEach(v => {",
-                  "        pm.sendRequest({ url: base + '/api/vehicles/' + v.id, method: 'DELETE', header: auth },",
-                  "            () => {});",
-                  "    });",
-                  "});"
+                  "console.log('TC-06: registration for this run = ' + pm.collectionVariables.get('testRegNo'));"
                 ]
               }
             },
@@ -663,7 +431,7 @@
                 "exec": [
                   "pm.test('TC-06 status is 201', () => pm.response.to.have.status(201));",
                   "const v = pm.response.json();",
-                  "pm.test('registration number is the unique test value',",
+                  "pm.test('registration number is this run\\'s value',",
                   "    () => pm.expect(v.registrationNo).to.eql(pm.collectionVariables.get('testRegNo')));",
                   "pm.collectionVariables.set('createdVehicleId', v.id);"
                 ]
@@ -866,7 +634,7 @@
       ]
     },
     {
-      "name": "5. Stations & availability",
+      "name": "4. Stations & availability",
       "item": [
         {
           "name": "TC-11 GET /api/stations (200, rating ranked)",
@@ -1083,11 +851,29 @@
       ]
     },
     {
-      "name": "6. Bookings (create / conflict / validation)",
+      "name": "5. Bookings (create / limits / conflict)",
+      "description": "Booking lifecycle. Order matters: TC-16 creates the booking the later cases use, and the fillers below must run before TC-24.",
       "item": [
         {
           "name": "TC-16 POST /api/bookings (201)",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Pick a random future window so repeated runs never collide. Capacity is",
+                  "// finite, so a fixed window would fill up and TC-16 would start answering 409.",
+                  "const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 200)) * 864e5);",
+                  "const date = day.toISOString().slice(0, 10);",
+                  "const hour = Math.floor(Math.random() * 22);",
+                  "const pad = n => String(n).padStart(2, '0');",
+                  "pm.collectionVariables.set('bkStart', date + 'T' + pad(hour) + ':00:00');",
+                  "pm.collectionVariables.set('bkEnd', date + 'T' + pad(hour + 1) + ':00:00');",
+                  "console.log('TC-16: booking window ' + pm.collectionVariables.get('bkStart'));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -1115,7 +901,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{slotDate}}T08:00:00\",\n  \"endTime\": \"{{slotDate}}T09:00:00\"\n}"
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{bkStart}}\",\n  \"endTime\": \"{{bkEnd}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/bookings",
@@ -1126,7 +912,8 @@
                 "api",
                 "bookings"
               ]
-            }
+            },
+            "description": "Expected 201 Created with status PENDING.\n\nPicks a random free window each run, so the case keeps passing no matter how often the collection is run. Saves the id as bookingId for the later cases."
           }
         },
         {
@@ -1253,53 +1040,154 @@
           }
         },
         {
-          "name": "TC-24 Capacity exceeded (409)",
+          "name": "Fill capacity 1 (setup for TC-24)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{slotDate}}T05:00:00\",\n  \"endTime\": \"{{slotDate}}T06:00:00\"\n}"
+            },
+            "description": "Takes one slot in the 05:00-06:00 window. Run three of these in order: with a capacity of 2 the window is guaranteed to be full, which is what makes TC-24 return 409. On later runs they simply report 409 because it is already full."
+          },
           "event": [
             {
-              "listen": "prerequest",
+              "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// TC-24 only returns 409 when the service is FULL for the requested window.",
-                  "// This pre-request fills capacity in a dedicated window (05:00-06:00) so the",
-                  "// case stands alone and never eats into the window TC-16 uses.",
-                  "const base = pm.collectionVariables.get('baseUrl');",
-                  "const payload = JSON.stringify({",
-                  "    vehicleId: pm.collectionVariables.get('vehicleId'),",
-                  "    serviceId: pm.collectionVariables.get('serviceId'),",
-                  "    startTime: pm.collectionVariables.get('slotDate') + 'T05:00:00',",
-                  "    endTime:   pm.collectionVariables.get('slotDate') + 'T06:00:00'",
-                  "});",
-                  "let attempt = 0;",
-                  "(function fill() {",
-                  "    if (attempt++ >= 8) {",
-                  "        console.log('TC-24: could not fill capacity in 8 attempts');",
-                  "        return;",
-                  "    }",
-                  "    pm.sendRequest({",
-                  "        url: base + '/api/bookings',",
-                  "        method: 'POST',",
-                  "        header: { 'Content-Type': 'application/json',",
-                  "                  'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') },",
-                  "        body: { mode: 'raw', raw: payload }",
-                  "    }, (err, res) => {",
-                  "        if (res && res.code === 409) {",
-                  "            console.log('TC-24: window full after ' + (attempt - 1) + ' booking(s); 409 expected next');",
-                  "        } else {",
-                  "            fill();",
-                  "        }",
-                  "    });",
-                  "})();"
+                  "// 201 = a slot was taken, 409 = the window was already full from an",
+                  "// earlier run. Both are fine; what matters is that it is full for TC-24.",
+                  "pm.test('capacity filler accepted',",
+                  "    () => pm.expect([201, 409]).to.include(pm.response.code));",
+                  "console.log('filler: HTTP ' + pm.response.code);"
                 ]
               }
+            }
+          ]
+        },
+        {
+          "name": "Fill capacity 2 (setup for TC-24)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
             },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{slotDate}}T05:00:00\",\n  \"endTime\": \"{{slotDate}}T06:00:00\"\n}"
+            },
+            "description": "Takes one slot in the 05:00-06:00 window. Run three of these in order: with a capacity of 2 the window is guaranteed to be full, which is what makes TC-24 return 409. On later runs they simply report 409 because it is already full."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 201 = a slot was taken, 409 = the window was already full from an",
+                  "// earlier run. Both are fine; what matters is that it is full for TC-24.",
+                  "pm.test('capacity filler accepted',",
+                  "    () => pm.expect([201, 409]).to.include(pm.response.code));",
+                  "console.log('filler: HTTP ' + pm.response.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fill capacity 3 (setup for TC-24)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{slotDate}}T05:00:00\",\n  \"endTime\": \"{{slotDate}}T06:00:00\"\n}"
+            },
+            "description": "Takes one slot in the 05:00-06:00 window. Run three of these in order: with a capacity of 2 the window is guaranteed to be full, which is what makes TC-24 return 409. On later runs they simply report 409 because it is already full."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 201 = a slot was taken, 409 = the window was already full from an",
+                  "// earlier run. Both are fine; what matters is that it is full for TC-24.",
+                  "pm.test('capacity filler accepted',",
+                  "    () => pm.expect([201, 409]).to.include(pm.response.code));",
+                  "console.log('filler: HTTP ' + pm.response.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-24 Capacity exceeded (409)",
+          "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('TC-24 status is 409', () => pm.response.to.have.status(409));",
-                  "pm.test('message explains the conflict', () => pm.expect(pm.response.json().message).to.contain('No free slots'));"
+                  "pm.test('message explains the conflict',",
+                  "    () => pm.expect(pm.response.json().message).to.contain('No free slots'));"
                 ]
               }
             }
@@ -1330,7 +1218,7 @@
                 "bookings"
               ]
             },
-            "description": "Expected 409 Conflict with the message \"No free slots left for the selected time\".\n\nSelf-contained \u2014 the pre-request script reserves the 05:00-06:00 window until the service is full, then this request asks for one more slot. This is the double-booking rule under test."
+            "description": "Expected 409 Conflict with \"No free slots left for the selected time\".\n\nThe three 'Fill capacity' requests above must run first \u2014 they guarantee the 05:00-06:00 window is at capacity, which is the condition this case tests."
           }
         },
         {
@@ -1412,40 +1300,53 @@
       ]
     },
     {
-      "name": "7. Payment (simulated)",
+      "name": "6. Payment (simulated)",
+      "description": "Runs after Bookings so the ids exist. Each payment case is preceded by the request that creates its booking.",
       "item": [
         {
-          "name": "TC-25 Pay a booking \u2014 SUCCESS",
+          "name": "Setup: create booking to pay",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{payOkBookingId_start}}\",\n  \"endTime\": \"{{payOkBookingId_end}}\"\n}"
+            },
+            "description": "Creates a dedicated PENDING booking for the success payment and saves it as payOkBookingId."
+          },
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// A booking can only be paid once: paying it again returns",
-                  "// 400 'Booking is already paid and confirmed'. So this case creates its own",
-                  "// dedicated booking the first time it runs.",
-                  "const base = pm.collectionVariables.get('baseUrl');",
-                  "if (pm.collectionVariables.get('payOkBookingId')) return;",
-                  "pm.sendRequest({",
-                  "    url: base + '/api/bookings',",
-                  "    method: 'POST',",
-                  "    header: { 'Content-Type': 'application/json',",
-                  "              'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') },",
-                  "    body: { mode: 'raw', raw: JSON.stringify({",
-                  "        vehicleId: pm.collectionVariables.get('vehicleId'),",
-                  "        serviceId: pm.collectionVariables.get('serviceId'),",
-                  "        startTime: pm.collectionVariables.get('slotDate') + 'T11:00:00',",
-                  "        endTime:   pm.collectionVariables.get('slotDate') + 'T12:00:00' }) }",
-                  "}, (err, res) => {",
-                  "    const b = res && res.json ? res.json() : null;",
-                  "    if (b && b.id) {",
-                  "        pm.collectionVariables.set('payOkBookingId', b.id);",
-                  "        console.log('TC-25: created booking ' + b.id + ' to pay');",
-                  "    } else {",
-                  "        console.log('TC-25: could not create a booking \u2014 reset collection variables and retry');",
-                  "    }",
-                  "});"
+                  "// Random window per run: a booking can only be paid once, and a paid",
+                  "// booking keeps its slot, so a fixed window would fill up over runs.",
+                  "const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 200)) * 864e5);",
+                  "const date = day.toISOString().slice(0, 10);",
+                  "const hour = 10;",
+                  "const pad = n => String(n).padStart(2, '0');",
+                  "pm.collectionVariables.set('payOkBookingId', date + 'T' + pad(hour) + ':00:00');_start",
+                  "pm.collectionVariables.set('payOkBookingId', date + 'T' + pad(hour + 1) + ':00:00');_end"
                 ]
               }
             },
@@ -1454,8 +1355,40 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('TC-25 payment SUCCESS', () => pm.expect(pm.response.json().status).to.eql('SUCCESS'));"
+                  "pm.test('Setup: status is 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('payOkBookingId', b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-25 Pay a booking \u2014 SUCCESS",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Fail with a readable message instead of sending a literal {{payOkBookingId}},",
+                  "// which would come back as a confusing 404.",
+                  "const id = pm.collectionVariables.get('payOkBookingId');",
+                  "if (!id) {",
+                  "    console.error('TC-25: payOkBookingId is empty \u2014 run \"TC-25\" first');",
+                  "    pm.collectionVariables.set('payOkBookingId', 'missing-run-the-setup-request-first');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-25 status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-25 payment SUCCESS',",
+                  "    () => pm.expect(pm.response.json().status).to.eql('SUCCESS'));"
                 ]
               }
             }
@@ -1487,8 +1420,68 @@
                 "{{payOkBookingId}}"
               ]
             },
-            "description": "Expected 200 with \"status\": \"SUCCESS\" and a SIM-<reference> transaction number.\n\nSelf-contained \u2014 the pre-request script creates a fresh PENDING booking (11:00-12:00) on the first run, because a booking can only be paid once."
+            "description": "Expected 200 with \"status\": \"SUCCESS\" and a SIM-<reference> transaction number.\n\nRun the 'Setup: create booking to pay' request immediately above first \u2014 it creates a fresh PENDING booking and saves payOkBookingId. A booking can only be paid once, which is why the collection creates its own instead of reusing another case's booking."
           }
+        },
+        {
+          "name": "Setup: create booking for forced failure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{failBookingId_start}}\",\n  \"endTime\": \"{{failBookingId_end}}\"\n}"
+            },
+            "description": "Creates a dedicated PENDING booking for the failure payment and saves it as failBookingId."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Random window per run: a booking can only be paid once, and a paid",
+                  "// booking keeps its slot, so a fixed window would fill up over runs.",
+                  "const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 200)) * 864e5);",
+                  "const date = day.toISOString().slice(0, 10);",
+                  "const hour = 12;",
+                  "const pad = n => String(n).padStart(2, '0');",
+                  "pm.collectionVariables.set('failBookingId', date + 'T' + pad(hour) + ':00:00');_start",
+                  "pm.collectionVariables.set('failBookingId', date + 'T' + pad(hour + 1) + ':00:00');_end"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Setup: status is 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('failBookingId', b.id);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "TC-26 Forced failure \u2014 FAILED",
@@ -1498,29 +1491,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// TC-26 needs its OWN unpaid booking. Reusing the booking TC-25 already paid",
-                  "// returns 400 'Booking is already paid and confirmed' instead of FAILED.",
-                  "const base = pm.collectionVariables.get('baseUrl');",
-                  "if (pm.collectionVariables.get('failBookingId')) return;",
-                  "pm.sendRequest({",
-                  "    url: base + '/api/bookings',",
-                  "    method: 'POST',",
-                  "    header: { 'Content-Type': 'application/json',",
-                  "              'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') },",
-                  "    body: { mode: 'raw', raw: JSON.stringify({",
-                  "        vehicleId: pm.collectionVariables.get('vehicleId'),",
-                  "        serviceId: pm.collectionVariables.get('serviceId'),",
-                  "        startTime: pm.collectionVariables.get('slotDate') + 'T12:00:00',",
-                  "        endTime:   pm.collectionVariables.get('slotDate') + 'T13:00:00' }) }",
-                  "}, (err, res) => {",
-                  "    const b = res && res.json ? res.json() : null;",
-                  "    if (b && b.id) {",
-                  "        pm.collectionVariables.set('failBookingId', b.id);",
-                  "        console.log('TC-26: created booking ' + b.id + ' for the forced failure');",
-                  "    } else {",
-                  "        console.log('TC-26: could not create a booking \u2014 reset collection variables and retry');",
-                  "    }",
-                  "});"
+                  "// Fail with a readable message instead of sending a literal {{failBookingId}},",
+                  "// which would come back as a confusing 404.",
+                  "const id = pm.collectionVariables.get('failBookingId');",
+                  "if (!id) {",
+                  "    console.error('TC-26: failBookingId is empty \u2014 run \"TC-26\" first');",
+                  "    pm.collectionVariables.set('failBookingId', 'missing-run-the-setup-request-first');",
+                  "}"
                 ]
               }
             },
@@ -1529,7 +1506,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('TC-26 payment FAILED', () => pm.expect(pm.response.json().status).to.eql('FAILED'));"
+                  "pm.test('TC-26 status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('TC-26 payment FAILED',",
+                  "    () => pm.expect(pm.response.json().status).to.eql('FAILED'));"
                 ]
               }
             }
@@ -1561,7 +1540,7 @@
                 "{{failBookingId}}"
               ]
             },
-            "description": "Expected 200 with \"status\": \"FAILED\" \u2014 the simulated gateway's failure path, which releases the slot.\n\nSelf-contained \u2014 the pre-request script creates a dedicated unpaid booking (12:00-13:00) so it never reuses the booking TC-25 already paid."
+            "description": "Expected 200 with \"status\": \"FAILED\" \u2014 the simulated gateway's failure path, which releases the slot.\n\nRun 'Setup: create booking for forced failure' first; it saves failBookingId, a booking that no other case has paid."
           }
         },
         {
@@ -1604,6 +1583,217 @@
                 "does-not-exist"
               ]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Security (401 / 403)",
+      "description": "Authorisation cases. Runs after Bookings because TC-23 needs a booking to exist in order to be forbidden from reading it.",
+      "item": [
+        {
+          "name": "TC-03 GET /api/users/me without token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-03 status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-04 GET /api/users/me with token (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-04 status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('email matches', () => pm.expect(pm.response.json().email).to.eql('test@ev.com'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-33 USER calling admin endpoint (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-33 status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "overview"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-35 ADMIN calling admin endpoint (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-35 status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "overview"
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-23 Other user's booking (403)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// TC-23 needs a booking owned by the USER. The Bookings folder runs before",
+                  "// this one and stores it, so no network call is needed here \u2014 a pre-request",
+                  "// script that awaits HTTP is unreliable in the Collection Runner.",
+                  "const id = pm.collectionVariables.get('bookingId');",
+                  "if (!id) {",
+                  "    console.error('TC-23: bookingId is empty \u2014 run folder 5 (TC-16) first');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-23 status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('the API explains that this is not your booking',",
+                  "    () => pm.expect(pm.response.json().message).to.contain('own bookings'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "{{bookingId}}"
+              ]
+            },
+            "description": "Expected 403 Forbidden: the operator is authenticated but does not own this booking. Runs after the Bookings folder, which stores bookingId. Ownership is checked before status, so this returns 403 even for a cancelled booking."
           }
         }
       ]
