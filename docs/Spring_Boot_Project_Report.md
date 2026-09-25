@@ -851,8 +851,14 @@ rather than the API:
 2. `PUT /api/vehicles/{unknown}` returned 400 instead of 404 because the test body was also invalid;
    validation runs before the existence check by design, so a valid body was required to reach the
    404 path.
-3. TC-24 depends on the service being full. The suite tops up the remaining capacity before
-   asserting, so the 409 is produced deterministically rather than by luck.
+3. TC-24 depends on the service being full, and two further cases depend on server *state*: a
+   booking can only be paid **once** (a second attempt correctly returns `400 "Booking is already
+   paid and confirmed"`), and TC-23 needs a booking that genuinely belongs to another user
+   (an empty id yields 404, not 403). The suite and the Postman collection therefore create the
+   state each case needs — filling capacity for TC-24 and creating dedicated unpaid bookings for
+   the two payment cases — so every result is produced deterministically rather than by luck.
+   The wider lesson recorded from this: **a test that depends on hidden state is a fragile test.**
+   All three were defects in the test harness, not in the API.
 
 ### 8.3 Screenshots
 

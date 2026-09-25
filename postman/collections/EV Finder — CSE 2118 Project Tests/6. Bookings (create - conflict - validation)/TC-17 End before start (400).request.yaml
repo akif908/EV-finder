@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "vehicleId": "{{vehicleId}}",
+      "serviceId": "{{serviceId}}",
+      "startTime": "{{slotDate}}T11:00:00",
+      "endTime": "{{slotDate}}T10:00:00"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-17 status is 400', () => pm.response.to.have.status(400));
+    language: text/javascript
+order: 2000

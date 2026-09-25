@@ -1,0 +1,20 @@
+$kind: http-request
+name: TC-39 POST /api/issues (201)
+url: "{{baseUrl}}/api/issues"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "category": "Bug / crash",
+      "subject": "Acceptance test issue",
+      "description": "Filed from the Postman collection."
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-39 status is 201', () => pm.response.to.have.status(201));
+    language: text/javascript
+order: 3000

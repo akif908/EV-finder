@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/payments/{{bookingId}}"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "paymentMethod": "CARD",
+      "forceFailure": true
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-26 payment FAILED', () => pm.expect(pm.response.json().status).to.eql('FAILED'));
+    language: text/javascript
+order: 2000

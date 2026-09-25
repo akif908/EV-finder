@@ -1,0 +1,12 @@
+$kind: http-request
+name: TC-43 GET /api/fuel-stations (200)
+url: "{{baseUrl}}/api/fuel-stations"
+method: GET
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-43 status is 200', () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 4000

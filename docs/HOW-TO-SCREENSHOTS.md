@@ -85,7 +85,7 @@ the status code is the most common reason marks are lost.
 |---|---|
 | Figure 4 | `1. Auth` → **TC-01 Login as USER (200)** |
 | Figure 5 | `6. Bookings` → **TC-16 POST /api/bookings (201)** |
-| Figure 6 | `6. Bookings` → **TC-24 Capacity exceeded (409)** — run TC-16 four times first, so the service is full |
+| Figure 6 | `6. Bookings` → **TC-24 Capacity exceeded (409)** — just press Send (it fills capacity itself, see below) |
 | Figure 7 | `7. Payment` → **TC-25 Pay a booking — SUCCESS** |
 | Figure 8 | `7. Payment` → **TC-26 Forced failure — FAILED** |
 | Figure 9 | `5. Stations & availability` → **TC-13 GET unknown station (404)** |
@@ -101,6 +101,41 @@ shows a green PASS — a second screenshot per case is optional but strengthens 
 |---|---|
 | Figure 2 — application started | The terminal window running `mvnw spring-boot:run`, showing `Tomcat started on port 8080` |
 | Figure 3 — database tables | Browser → <http://localhost/phpmyadmin> → database `ev_finder` → open the `bookings` table so rows are visible |
+
+---
+
+## A8. Troubleshooting: why a case shows the wrong status
+
+Three cases depend on server **state**, not just on a valid request. Each now sets up its own state
+with a pre-request script, so they run correctly on their own — but the reasons are worth knowing,
+because they are real API behaviours:
+
+| Case | If it returned the wrong status before | Why | Now |
+|---|---|---|---|
+| **TC-23** (other user's booking → 403) | 404 instead of 403 | `{{bookingId}}` was still empty, so the URL was `/api/bookings/` — an empty id matches no booking. The 403 you expected needs a *real* booking owned by someone else. | The pre-request script picks one of the user's existing bookings if none is stored |
+| **TC-24** (capacity exceeded → 409) | 201 instead of 409 | Capacity was not full. The service holds **2** slots, so a single booking leaves a free slot and the next request is legitimately accepted. | The pre-request script books the 05:00-06:00 window until the service reports 409, then the case asks for one more |
+| **TC-26** (forced failure → FAILED) | 400 instead of FAILED | It was reusing the same booking that **TC-25 had already paid**. A booking can only be paid once, so the API correctly answered `400 "Booking is already paid and confirmed"`. | The pre-request script creates a dedicated unpaid booking (12:00-13:00) |
+
+None of these were API bugs — in each case the API was enforcing a rule correctly. They were
+deficiencies in how the collection set up its data, which is a useful thing to note in the report's
+testing section: *a test that depends on hidden state is a fragile test.*
+
+**Postman's Console** (bottom-left → Console) prints what each pre-request script did, for example
+`TC-24: window full after 2 booking(s); 409 expected next`. If a case still fails, open the Console
+and read that line first.
+
+### Re-running the suite
+
+The pre-request scripts create bookings, and those bookings hold capacity permanently (that is the
+point of the rule). Variables are cached, so a second run reuses the same ids and still passes.
+If you want a completely fresh run:
+
+1. Collection → **Variables** tab → **Reset All** (or delete the values for `stationId`,
+   `serviceId`, `vehicleId`, `slotDate`, `bookingId`, `payOkBookingId`, `failBookingId`).
+2. Re-run folder **1. Auth**, then **2. Setup**, then the cases you need.
+
+A *third* run of TC-24 may report `409` even in its pre-request script, which is fine — the script
+stops as soon as it sees that status and the case still expects 409.
 
 ---
 

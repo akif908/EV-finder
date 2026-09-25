@@ -1,0 +1,12 @@
+$kind: http-request
+name: TC-12 GET /api/stations/{id} (200)
+url: "{{baseUrl}}/api/stations/{{stationId}}"
+method: GET
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-12 status is 200', () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 2000

@@ -1,0 +1,16 @@
+$kind: http-request
+name: TC-14 GET /api/stations/nearby (200)
+url: "{{baseUrl}}/api/stations/nearby?latitude=23.78&longitude=90.41&radiusKm=15"
+method: GET
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+queryParams:
+  latitude: "23.78"
+  longitude: "90.41"
+  radiusKm: "15"
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-14 status is 200', () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 4000

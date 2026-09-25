@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/api/admin/overview"
+method: GET
+headers:
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-35 status is 200', () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 4000

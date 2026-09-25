@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/payments/{{bookingId}}"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "paymentMethod": "MOBILE_BANKING",
+      "forceFailure": false
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      pm.test('TC-25 payment SUCCESS', () => pm.expect(pm.response.json().status).to.eql('SUCCESS'));
+    language: text/javascript
+order: 1000

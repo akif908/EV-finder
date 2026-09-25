@@ -1,0 +1,14 @@
+$kind: http-request
+name: TC-47 GET /api/news (200)
+url: "{{baseUrl}}/api/news?limit=10"
+method: GET
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+queryParams:
+  limit: "10"
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-47 status is 200', () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 5000

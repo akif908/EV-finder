@@ -1,0 +1,23 @@
+$kind: http-request
+name: TC-06 POST /api/vehicles (201)
+url: "{{baseUrl}}/api/vehicles"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "manufacturer": "Test",
+      "model": "Acceptance Car",
+      "vehicleType": "ELECTRIC_CAR",
+      "connectorType": "CCS2",
+      "batteryCapacityKwh": 60,
+      "registrationNo": "TST-AC-001"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-06 status is 201', () => pm.response.to.have.status(201));
+    language: text/javascript
+order: 1000

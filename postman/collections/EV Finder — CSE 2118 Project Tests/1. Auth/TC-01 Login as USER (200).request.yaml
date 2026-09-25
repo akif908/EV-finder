@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "test@ev.com",
+      "password": "secret123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-01 status is 200', () => pm.response.to.have.status(200));
+      const b = pm.response.json();
+      pm.test('role is USER and token returned', () => { pm.expect(b.role).to.eql('USER'); pm.expect(b.token).to.be.a('string'); });
+      pm.collectionVariables.set('userToken', b.token);
+    language: text/javascript
+order: 1000

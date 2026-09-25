@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "vehicleId": "{{vehicleId}}",
+      "serviceId": "{{serviceId}}",
+      "startTime": "{{slotDate}}T08:00:00",
+      "endTime": "{{slotDate}}T09:00:00"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-24 status is 409', () => pm.response.to.have.status(409));
+      pm.test('message explains the conflict', () => pm.expect(pm.response.json().message).to.contain('No free slots'));
+    language: text/javascript
+order: 5000

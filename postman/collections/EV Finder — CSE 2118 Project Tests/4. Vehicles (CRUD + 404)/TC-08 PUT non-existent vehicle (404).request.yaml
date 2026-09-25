@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/api/vehicles/does-not-exist"
+method: PUT
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "manufacturer": "X",
+      "model": "Y",
+      "vehicleType": "ELECTRIC_CAR",
+      "connectorType": "CCS2",
+      "batteryCapacityKwh": 50,
+      "registrationNo": "TST-XX-999"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-08 status is 404', () => pm.response.to.have.status(404));
+    language: text/javascript
+order: 2000

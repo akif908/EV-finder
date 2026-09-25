@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/vehicles/my"
+method: GET
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      const list = pm.response.json();
+      pm.test('at least one vehicle exists', () => pm.expect(list.length).to.be.above(0));
+      pm.collectionVariables.set('vehicleId', list[0].id);
+    language: text/javascript
+order: 2000

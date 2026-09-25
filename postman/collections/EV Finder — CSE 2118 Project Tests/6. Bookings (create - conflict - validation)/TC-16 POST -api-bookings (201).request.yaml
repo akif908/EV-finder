@@ -1,0 +1,25 @@
+$kind: http-request
+name: TC-16 POST /api/bookings (201)
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "vehicleId": "{{vehicleId}}",
+      "serviceId": "{{serviceId}}",
+      "startTime": "{{slotDate}}T08:00:00",
+      "endTime": "{{slotDate}}T09:00:00"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-16 status is 201', () => pm.response.to.have.status(201));
+      const b = pm.response.json();
+      pm.test('starts as PENDING', () => pm.expect(b.status).to.eql('PENDING'));
+      pm.collectionVariables.set('bookingId', b.id);
+    language: text/javascript
+order: 1000

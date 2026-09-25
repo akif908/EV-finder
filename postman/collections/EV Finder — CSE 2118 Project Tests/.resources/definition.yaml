@@ -1,0 +1,26 @@
+$kind: collection
+description: |-
+  Acceptance tests for the EV Charging & Battery-Swap Finder backend.
+
+  HOW TO USE FOR SCREENSHOTS
+  1. Import this file into Postman (File > Import).
+  2. Set the collection variable `baseUrl` (default http://localhost:8080).
+  3. Run the three requests in the `1. Auth` folder first — their test scripts save the JWTs
+     into collection variables, so every later request authenticates automatically.
+  4. Run `2. Setup` once — it saves stationId / serviceId / vehicleId / bookingId that the
+     later requests reuse.
+  5. Open each request, press Send, and screenshot the request (method + URL + body) together
+     with the response (status code + body). That single screenshot is what Section 8 needs.
+
+  Each request carries a `pm.test` assertion, so the Postman test result tab also shows PASS.
+variables:
+  baseUrl: http://localhost:8080
+  userToken: ""
+  operatorToken: ""
+  adminToken: ""
+  stationId: ""
+  serviceId: ""
+  vehicleId: ""
+  bookingId: ""
+  fuelStationId: ""
+  slotDate: ""

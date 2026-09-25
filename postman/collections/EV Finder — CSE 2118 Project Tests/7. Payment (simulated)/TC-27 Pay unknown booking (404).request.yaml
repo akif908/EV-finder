@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/payments/does-not-exist"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "paymentMethod": "CARD",
+      "forceFailure": false
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test('TC-27 status is 404', () => pm.response.to.have.status(404));
+    language: text/javascript
+order: 3000

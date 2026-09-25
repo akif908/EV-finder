@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/fuel-stations"
+method: GET
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      const list = pm.response.json();
+      if (list.length) pm.collectionVariables.set('fuelStationId', list[0].id);
+    language: text/javascript
+order: 3000

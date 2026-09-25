@@ -1,0 +1,11 @@
+# Use this workspace to collaborate
+workspace:
+  id: 8de0f74f-f4af-4e92-878d-1c9754d501e0
+
+localResources:
+  collections:
+    - ../docs/EV-Finder.postman_collection.json
+
+cloudResources:
+  collections:
+    ../postman/collections/EV Finder — CSE 2118 Project Tests: a1717557-8c64-4a1f-877c-17bf0eb27ba9

@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/stations"
+method: GET
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      const list = pm.response.json();
+      pm.test('stations returned', () => pm.expect(list.length).to.be.above(0));
+      pm.collectionVariables.set('stationId', list[0].id);
+      pm.collectionVariables.set('serviceId', list[0].services[0].id);
+      const d = new Date(Date.now() + 2*864e5).toISOString().slice(0,10);
+      pm.collectionVariables.set('slotDate', d);
+    language: text/javascript
+order: 1000
