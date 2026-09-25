@@ -383,6 +383,10 @@ deliberately left out to keep a single source of truth.
 
 | Document | What's inside |
 |---|---|
+| [`docs/Spring_Boot_Project_Report.md`](docs/Spring_Boot_Project_Report.md) | **Submission report** in the CSE 2118 template — architecture, implementation, endpoint reference, database config, 49-case test results, challenges, conclusion |
+| [`docs/HOW-TO-SCREENSHOTS.md`](docs/HOW-TO-SCREENSHOTS.md) | Step-by-step guide to capturing the Section 8 test screenshots (Postman import, run order, which request maps to which figure) |
+| [`docs/EV-Finder.postman_collection.json`](docs/EV-Finder.postman_collection.json) | Importable Postman collection — 8 folders, 38 requests with assertions; run the logins + Setup once and the rest authenticate automatically |
+| [`docs/run-api-tests.sh`](docs/run-api-tests.sh) | 49-case automated acceptance suite; prints a markdown results table and writes `docs/test-evidence.log` |
 | [`docs/PROJECT-REPORT.md`](docs/PROJECT-REPORT.md) | Full technical report: requirements, architecture, all technologies and versions, structures, complete API reference, DB design, algorithms with code, non-functional aspects, limitations |
 | [`schema.sql`](schema.sql) | Complete, runnable MySQL DDL for all 12 tables |
 | [`schema-changes.md`](schema-changes.md) | Every change made to the original schema diagram, and why |
