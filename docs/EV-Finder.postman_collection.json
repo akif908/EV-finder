@@ -1,0 +1,629 @@
+{
+  "info": {
+    "name": "EV Finder — CSE 2118 Project Tests",
+    "_postman_id": "b7f1c2a4-9d3e-4a51-8f60-2c7e5b91a001",
+    "description": "Acceptance tests for the EV Charging & Battery-Swap Finder backend.\n\nHOW TO USE FOR SCREENSHOTS\n1. Import this file into Postman (File > Import).\n2. Set the collection variable `baseUrl` (default http://localhost:8080).\n3. Run the three requests in the `1. Auth` folder first — their test scripts save the JWTs\n   into collection variables, so every later request authenticates automatically.\n4. Run `2. Setup` once — it saves stationId / serviceId / vehicleId / bookingId that the\n   later requests reuse.\n5. Open each request, press Send, and screenshot the request (method + URL + body) together\n   with the response (status code + body). That single screenshot is what Section 8 needs.\n\nEach request carries a `pm.test` assertion, so the Postman test result tab also shows PASS.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "userToken", "value": "" },
+    { "key": "operatorToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "stationId", "value": "" },
+    { "key": "serviceId", "value": "" },
+    { "key": "vehicleId", "value": "" },
+    { "key": "bookingId", "value": "" },
+    { "key": "fuelStationId", "value": "" },
+    { "key": "slotDate", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "TC-01 Login as USER (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-01 status is 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('role is USER and token returned', () => { pm.expect(b.role).to.eql('USER'); pm.expect(b.token).to.be.a('string'); });",
+                  "pm.collectionVariables.set('userToken', b.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@ev.com\",\n  \"password\": \"secret123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login as OPERATOR (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('operatorToken', pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"operator@ev.com\",\n  \"password\": \"operator123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login as ADMIN (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('adminToken', pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@ev.com\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "TC-02 Login wrong password (401)",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('TC-02 status is 401', () => pm.response.to.have.status(401));"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@ev.com\",\n  \"password\": \"wrong-password\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "TC-05 Register invalid payload (400)",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('TC-05 status is 400', () => pm.response.to.have.status(400));"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"email\": \"not-an-email\",\n  \"password\": \"123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Setup (run once, saves ids)",
+      "item": [
+        {
+          "name": "Save station + service ids",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const list = pm.response.json();",
+              "pm.test('stations returned', () => pm.expect(list.length).to.be.above(0));",
+              "pm.collectionVariables.set('stationId', list[0].id);",
+              "pm.collectionVariables.set('serviceId', list[0].services[0].id);",
+              "const d = new Date(Date.now() + 2*864e5).toISOString().slice(0,10);",
+              "pm.collectionVariables.set('slotDate', d);"
+            ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/stations", "host": ["{{baseUrl}}"], "path": ["api", "stations"] }
+          }
+        },
+        {
+          "name": "Save vehicle id",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const list = pm.response.json();",
+              "pm.test('at least one vehicle exists', () => pm.expect(list.length).to.be.above(0));",
+              "pm.collectionVariables.set('vehicleId', list[0].id);"
+            ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/vehicles/my", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "my"] }
+          }
+        },
+        {
+          "name": "Save fuel station id",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const list = pm.response.json();",
+              "if (list.length) pm.collectionVariables.set('fuelStationId', list[0].id);"
+            ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/fuel-stations", "host": ["{{baseUrl}}"], "path": ["api", "fuel-stations"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Security (401 / 403)",
+      "item": [
+        {
+          "name": "TC-03 GET /api/users/me without token (401)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-03 status is 401', () => pm.response.to.have.status(401));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/users/me", "host": ["{{baseUrl}}"], "path": ["api", "users", "me"] }
+          }
+        },
+        {
+          "name": "TC-04 GET /api/users/me with token (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-04 status is 200', () => pm.response.to.have.status(200));",
+            "pm.test('email matches', () => pm.expect(pm.response.json().email).to.eql('test@ev.com'));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/users/me", "host": ["{{baseUrl}}"], "path": ["api", "users", "me"] }
+          }
+        },
+        {
+          "name": "TC-33 USER calling admin endpoint (403)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-33 status is 403', () => pm.response.to.have.status(403));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/admin/overview", "host": ["{{baseUrl}}"], "path": ["api", "admin", "overview"] }
+          }
+        },
+        {
+          "name": "TC-35 ADMIN calling admin endpoint (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-35 status is 200', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/admin/overview", "host": ["{{baseUrl}}"], "path": ["api", "admin", "overview"] }
+          }
+        },
+        {
+          "name": "TC-23 Other user's booking (403)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-23 status is 403', () => pm.response.to.have.status(403));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{operatorToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "{{bookingId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Vehicles (CRUD + 404)",
+      "item": [
+        {
+          "name": "TC-06 POST /api/vehicles (201)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-06 status is 201', () => pm.response.to.have.status(201));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"manufacturer\": \"Test\",\n  \"model\": \"Acceptance Car\",\n  \"vehicleType\": \"ELECTRIC_CAR\",\n  \"connectorType\": \"CCS2\",\n  \"batteryCapacityKwh\": 60,\n  \"registrationNo\": \"TST-AC-001\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/vehicles", "host": ["{{baseUrl}}"], "path": ["api", "vehicles"] }
+          }
+        },
+        {
+          "name": "TC-08 PUT non-existent vehicle (404)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-08 status is 404', () => pm.response.to.have.status(404));"] } }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"manufacturer\": \"X\",\n  \"model\": \"Y\",\n  \"vehicleType\": \"ELECTRIC_CAR\",\n  \"connectorType\": \"CCS2\",\n  \"batteryCapacityKwh\": 50,\n  \"registrationNo\": \"TST-XX-999\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/vehicles/does-not-exist", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "does-not-exist"] }
+          }
+        },
+        {
+          "name": "TC-10 DELETE non-existent vehicle (404)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-10 status is 404', () => pm.response.to.have.status(404));"] } }],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/vehicles/does-not-exist", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "does-not-exist"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Stations & availability",
+      "item": [
+        {
+          "name": "TC-11 GET /api/stations (200, rating ranked)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-11 status is 200', () => pm.response.to.have.status(200));",
+            "pm.test('non-empty list', () => pm.expect(pm.response.json().length).to.be.above(0));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/stations", "host": ["{{baseUrl}}"], "path": ["api", "stations"] }
+          }
+        },
+        {
+          "name": "TC-12 GET /api/stations/{id} (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-12 status is 200', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/stations/{{stationId}}", "host": ["{{baseUrl}}"], "path": ["api", "stations", "{{stationId}}"] }
+          }
+        },
+        {
+          "name": "TC-13 GET unknown station (404)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-13 status is 404', () => pm.response.to.have.status(404));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/stations/does-not-exist", "host": ["{{baseUrl}}"], "path": ["api", "stations", "does-not-exist"] }
+          }
+        },
+        {
+          "name": "TC-14 GET /api/stations/nearby (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-14 status is 200', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations/nearby?latitude=23.78&longitude=90.41&radiusKm=15",
+              "host": ["{{baseUrl}}"], "path": ["api", "stations", "nearby"],
+              "query": [
+                { "key": "latitude", "value": "23.78" },
+                { "key": "longitude", "value": "90.41" },
+                { "key": "radiusKm", "value": "15" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "TC-15 GET slots for a date (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-15 status is 200', () => pm.response.to.have.status(200));",
+            "pm.test('slot grid non-empty', () => pm.expect(pm.response.json().length).to.be.above(0));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/services/{{serviceId}}/slots?date={{slotDate}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "services", "{{serviceId}}", "slots"],
+              "query": [{ "key": "date", "value": "{{slotDate}}" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Bookings (create / conflict / validation)",
+      "item": [
+        {
+          "name": "TC-16 POST /api/bookings (201)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-16 status is 201', () => pm.response.to.have.status(201));",
+            "const b = pm.response.json();",
+            "pm.test('starts as PENDING', () => pm.expect(b.status).to.eql('PENDING'));",
+            "pm.collectionVariables.set('bookingId', b.id);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{slotDate}}T08:00:00\",\n  \"endTime\": \"{{slotDate}}T09:00:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/bookings", "host": ["{{baseUrl}}"], "path": ["api", "bookings"] }
+          }
+        },
+        {
+          "name": "TC-17 End before start (400)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-17 status is 400', () => pm.response.to.have.status(400));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{slotDate}}T11:00:00\",\n  \"endTime\": \"{{slotDate}}T10:00:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/bookings", "host": ["{{baseUrl}}"], "path": ["api", "bookings"] }
+          }
+        },
+        {
+          "name": "TC-18 Slot in the past (400)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-18 status is 400', () => pm.response.to.have.status(400));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"2020-01-01T10:00:00\",\n  \"endTime\": \"2020-01-01T11:00:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/bookings", "host": ["{{baseUrl}}"], "path": ["api", "bookings"] }
+          }
+        },
+        {
+          "name": "TC-19 Unknown service (404)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-19 status is 404', () => pm.response.to.have.status(404));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"does-not-exist\",\n  \"startTime\": \"{{slotDate}}T08:00:00\",\n  \"endTime\": \"{{slotDate}}T09:00:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/bookings", "host": ["{{baseUrl}}"], "path": ["api", "bookings"] }
+          }
+        },
+        {
+          "name": "TC-24 Capacity exceeded (409)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-24 status is 409', () => pm.response.to.have.status(409));",
+            "pm.test('message explains the conflict', () => pm.expect(pm.response.json().message).to.contain('No free slots'));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{slotDate}}T08:00:00\",\n  \"endTime\": \"{{slotDate}}T09:00:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/bookings", "host": ["{{baseUrl}}"], "path": ["api", "bookings"] }
+          }
+        },
+        {
+          "name": "TC-20 GET /api/bookings/my (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-20 status is 200', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/bookings/my", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "my"] }
+          }
+        },
+        {
+          "name": "TC-22 GET unknown booking (404)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-22 status is 404', () => pm.response.to.have.status(404));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/bookings/does-not-exist", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "does-not-exist"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Payment (simulated)",
+      "item": [
+        {
+          "name": "TC-25 Pay a booking — SUCCESS",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('TC-25 payment SUCCESS', () => pm.expect(pm.response.json().status).to.eql('SUCCESS'));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"paymentMethod\": \"MOBILE_BANKING\",\n  \"forceFailure\": false\n}" },
+            "url": { "raw": "{{baseUrl}}/api/payments/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["api", "payments", "{{bookingId}}"] }
+          }
+        },
+        {
+          "name": "TC-26 Forced failure — FAILED",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-26 payment FAILED', () => pm.expect(pm.response.json().status).to.eql('FAILED'));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"paymentMethod\": \"CARD\",\n  \"forceFailure\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/api/payments/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["api", "payments", "{{bookingId}}"] }
+          }
+        },
+        {
+          "name": "TC-27 Pay unknown booking (404)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-27 status is 404', () => pm.response.to.have.status(404));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"paymentMethod\": \"CARD\",\n  \"forceFailure\": false\n}" },
+            "url": { "raw": "{{baseUrl}}/api/payments/does-not-exist", "host": ["{{baseUrl}}"], "path": ["api", "payments", "does-not-exist"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Reviews, notifications, issues, fuel, news",
+      "item": [
+        {
+          "name": "TC-29 GET station reviews (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-29 status is 200', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/reviews/station/{{stationId}}", "host": ["{{baseUrl}}"], "path": ["api", "reviews", "station", "{{stationId}}"] }
+          }
+        },
+        {
+          "name": "TC-31 Unread notification count (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-31 status is 200', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/notifications/unread-count", "host": ["{{baseUrl}}"], "path": ["api", "notifications", "unread-count"] }
+          }
+        },
+        {
+          "name": "TC-39 POST /api/issues (201)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-39 status is 201', () => pm.response.to.have.status(201));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"category\": \"Bug / crash\",\n  \"subject\": \"Acceptance test issue\",\n  \"description\": \"Filed from the Postman collection.\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/issues", "host": ["{{baseUrl}}"], "path": ["api", "issues"] }
+          }
+        },
+        {
+          "name": "TC-43 GET /api/fuel-stations (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-43 status is 200', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/fuel-stations", "host": ["{{baseUrl}}"], "path": ["api", "fuel-stations"] }
+          }
+        },
+        {
+          "name": "TC-47 GET /api/news (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-47 status is 200', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/news?limit=10", "host": ["{{baseUrl}}"], "path": ["api", "news"], "query": [{ "key": "limit", "value": "10" }] }
+          }
+        },
+        {
+          "name": "TC-48 Cancel a booking (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-48 status is 200', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "{{bookingId}}", "cancel"] }
+          }
+        },
+        {
+          "name": "TC-49 Cancel twice (400)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('TC-49 status is 400', () => pm.response.to.have.status(400));"] } }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{userToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "{{bookingId}}", "cancel"] }
+          }
+        }
+      ]
+    }
+  ]
+}
