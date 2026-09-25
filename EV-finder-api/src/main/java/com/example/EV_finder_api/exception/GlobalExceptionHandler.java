@@ -26,6 +26,24 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI());
     }
 
+    @ExceptionHandler(ResourceInUseException.class)
+    public ResponseEntity<ApiError> inUse(ResourceInUseException ex, HttpServletRequest req) {
+        return body(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI());
+    }
+
+    /**
+     * Safety net: a foreign-key violation must never surface as a 500.
+     * Services should raise ResourceInUseException with a helpful message;
+     * this catches anything they miss.
+     */
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> dataIntegrity(
+            org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest req) {
+        return body(HttpStatus.CONFLICT,
+                "The request conflicts with existing related data and cannot be completed",
+                req.getRequestURI());
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiError> unauthorized(UnauthorizedException ex, HttpServletRequest req) {
         return body(HttpStatus.UNAUTHORIZED, ex.getMessage(), req.getRequestURI());

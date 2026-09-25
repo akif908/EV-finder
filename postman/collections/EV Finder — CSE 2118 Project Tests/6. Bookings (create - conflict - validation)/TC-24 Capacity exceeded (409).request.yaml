@@ -1,4 +1,8 @@
 $kind: http-request
+description: |-
+  Expected 409 Conflict with the message "No free slots left for the selected time".
+
+  Self-contained — the pre-request script reserves the 05:00-06:00 window until the service is full, then this request asks for one more slot. This is the double-booking rule under test.
 url: "{{baseUrl}}/api/bookings"
 method: POST
 headers:
@@ -10,10 +14,43 @@ body:
     {
       "vehicleId": "{{vehicleId}}",
       "serviceId": "{{serviceId}}",
-      "startTime": "{{slotDate}}T08:00:00",
-      "endTime": "{{slotDate}}T09:00:00"
+      "startTime": "{{slotDate}}T05:00:00",
+      "endTime": "{{slotDate}}T06:00:00"
     }
 scripts:
+  - type: beforeRequest
+    code: |-
+      // TC-24 only returns 409 when the service is FULL for the requested window.
+      // This pre-request fills capacity in a dedicated window (05:00-06:00) so the
+      // case stands alone and never eats into the window TC-16 uses.
+      const base = pm.collectionVariables.get('baseUrl');
+      const payload = JSON.stringify({
+          vehicleId: pm.collectionVariables.get('vehicleId'),
+          serviceId: pm.collectionVariables.get('serviceId'),
+          startTime: pm.collectionVariables.get('slotDate') + 'T05:00:00',
+          endTime:   pm.collectionVariables.get('slotDate') + 'T06:00:00'
+      });
+      let attempt = 0;
+      (function fill() {
+          if (attempt++ >= 8) {
+              console.log('TC-24: could not fill capacity in 8 attempts');
+              return;
+          }
+          pm.sendRequest({
+              url: base + '/api/bookings',
+              method: 'POST',
+              header: { 'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') },
+              body: { mode: 'raw', raw: payload }
+          }, (err, res) => {
+              if (res && res.code === 409) {
+                  console.log('TC-24: window full after ' + (attempt - 1) + ' booking(s); 409 expected next');
+              } else {
+                  fill();
+              }
+          });
+      })();
+    language: text/javascript
   - type: afterResponse
     code: |-
       pm.test('TC-24 status is 409', () => pm.response.to.have.status(409));

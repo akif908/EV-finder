@@ -30,7 +30,7 @@ across three roles — USER, OPERATOR and ADMIN — secured with JSON Web Tokens
 hashing. Booking conflicts are prevented by counting active overlapping bookings against a
 service's installed capacity inside a single transaction, and availability changes are pushed to
 clients over a WebSocket. The API exposes 54 endpoints across 16 controllers and was validated with
-a 49-case acceptance suite covering success *and* failure paths, in which all 49 cases returned the
+a 50-case acceptance suite covering success *and* failure paths, in which all 50 cases returned the
 expected HTTP status.
 
 ---
@@ -605,7 +605,7 @@ requires `Authorization: Bearer <jwt>`. Representative endpoints are listed belo
 | POST | `/api/vehicles` | Add a vehicle | Vehicle JSON | 201 Created | 400 Bad Request |
 | GET | `/api/vehicles/my` | List own vehicles | None | 200 OK | 401 Unauthorized |
 | PUT | `/api/vehicles/{id}` | Update a vehicle | Vehicle JSON | 200 OK | 404 Not Found |
-| DELETE | `/api/vehicles/{id}` | Delete a vehicle | None | 204 No Content | 404 Not Found |
+| DELETE | `/api/vehicles/{id}` | Delete a vehicle | None | 204 No Content | 404 Not Found, 409 Conflict (has booking history) |
 | GET | `/api/stations` | List stations (rating-ranked) | None | 200 OK | 401 Unauthorized |
 | GET | `/api/stations/{id}` | One station + services | None | 200 OK | 404 Not Found |
 | GET | `/api/stations/nearby` | Stations within radius | Query params | 200 OK | 400 Bad Request |
@@ -838,8 +838,13 @@ resolves its ids automatically.
 | TC-47 | GET | /api/news | 200 | 200 | Pass |
 | TC-48 | PUT | /api/bookings/{id}/cancel | 200 | 200 | Pass |
 | TC-49 | PUT | /api/bookings/{id}/cancel (second time) | 400 | 400 | Pass |
+| TC-50 | DELETE | /api/vehicles/{id} (has booking history) | 409 | 409 | Pass |
 
-**TOTAL: 49 · PASSED: 49 · FAILED: 0**
+**TOTAL: 50 · PASSED: 50 · FAILED: 0**
+
+All 50 cases pass against a backend built from the current source. TC-50 was added after testing
+exposed the defect described in finding 4 below; on an older build that endpoint answers **500**, so
+the backend must be rebuilt and restarted for the case to pass.
 
 Three findings during test development are worth recording, because two were defects in the *tests*
 rather than the API:
@@ -859,6 +864,17 @@ rather than the API:
    the two payment cases — so every result is produced deterministically rather than by luck.
    The wider lesson recorded from this: **a test that depends on hidden state is a fragile test.**
    All three were defects in the test harness, not in the API.
+4. **A real API defect surfaced while fixing the test harness.** Making the cleanup script delete
+   leftover test vehicles revealed that `DELETE /api/vehicles/{id}` answered **500 Internal Server
+   Error** — not 404 or 409 — whenever the vehicle was referenced by any booking. The foreign key is
+   `ON DELETE RESTRICT`, so Hibernate raised a `DataIntegrityViolationException` that
+   `GlobalExceptionHandler` did not handle and which therefore escaped as a 500. This had gone
+   unnoticed because the original TC-09 deleted a *freshly created* vehicle, which has no booking
+   history, so the failing path was never exercised. Fixed by guarding the delete in the service
+   (`ResourceInUseException` → 409 with the message "This vehicle has booking history and cannot be
+   deleted"), plus a `DataIntegrityViolationException` handler as a safety net so that no foreign-key
+   violation anywhere in the API can surface as a 500. TC-50 now covers it. **The lesson: a test
+   suite is only as good as the state it exercises — a green suite can still hide an untested path.**
 
 ### 8.3 Screenshots
 
@@ -899,6 +915,7 @@ selected time"]*
 | **Two users could reserve the same slot, overbooking a charge point** | The first implementation only checked that the service existed and was ACTIVE, so capacity was never considered. A single-slot flag would also have failed, because one charge point must serve many non-overlapping bookings per day. | Introduced a capacity model: `station_services.available_slots` is the installed capacity, and a booking is refused when the count of PENDING/CONFIRMED bookings overlapping the requested half-open window reaches that capacity. The count and the insert happen in one `@Transactional` method so two concurrent requests cannot both claim the last slot, and a composite index `idx_bookings_conflict(service_id, status, start_time, end_time)` keeps the count fast. Verified by TC-24 (409). |
 | **`LazyInitializationException` when returning a review response** | `spring.jpa.open-in-view=false` closes the Hibernate session when the transaction ends. The controller then tried to serialise a response that still referenced a lazy `user`/`station` proxy, and there was no session left to resolve it. | Enabled lazy loading only where it is legitimate: the review creation path is `@Transactional` so the association loads inside the transaction, and all responses are built by DTO mappers in the service layer (`BookingResponse.from`, `ReviewResponse.from`) which touch the associations while the session is still open. The API never serialises entities directly. |
 | **A new controller returned 404 while the same path without a token returned 401** | The running server was an older process that predated the new controller classes. The 401 was produced by the security filter chain, which authenticates *before* routing, so an unmapped path also answers 401 unauthenticated — which made the endpoint look "present but forbidden" instead of "missing". | Rebuilt and restarted the backend so the new mappings were registered, then re-tested. The lesson recorded in the project notes: when an authenticated call returns 404 but an unauthenticated call returns 401, check that the running server contains the code before debugging the routing. |
+| **`DELETE /api/vehicles/{id}` returned 500 instead of 409** | The vehicle foreign key in `bookings` is `ON DELETE RESTRICT`. Deleting a vehicle that any booking referenced raised a `DataIntegrityViolationException`, and `GlobalExceptionHandler` had no handler for it, so it escaped as an unhandled 500. The original test only deleted a *freshly created* vehicle with no history, so the broken path was never exercised. | Added a guard in `VehicleServiceImpl.delete` that checks `bookingRepository.existsByVehicleId(...)` first and throws `ResourceInUseException`, mapped to **409 Conflict** with a message explaining the vehicle has booking history — which also preserves booking records rather than orphaning them. Added a `DataIntegrityViolationException` handler as a safety net so no foreign-key violation anywhere can surface as a 500, and added TC-50 to cover the case. |
 | **Android client could not reach the backend ("request failed")** | The client's base URL is a LAN IP constant; the PC's DHCP address changed (…102 → …103 → …105), so the app was calling an address that no longer existed. | Updated the `HOST_IP` constant and documented in the README that it must match the machine's current IPv4 address; a DHCP reservation or a static address is the durable fix. |
 
 ---
@@ -917,7 +934,7 @@ and it delivers that end to end. Each objective from Section 1.2 was met:
 | Prevent double-booking with 409 | Implemented with the overlap-count rule, verified by TC-24 |
 | Full booking lifecycle with simulated payment | PENDING → CONFIRMED/CANCELLED with SUCCESS, FAILED and REFUNDED payment states. TC-16, TC-25, TC-26, TC-48 |
 | Documented REST API with correct status codes | 54 endpoints over 16 controllers; 200/201/204/400/401/403/404/409 all exercised. TC-01…TC-49 |
-| Verify with an automated suite | 49 cases, 49 passing, script and raw evidence committed |
+| Verify with an automated suite | 50 cases, all passing, script and raw evidence committed; one real 500-on-delete defect found and fixed in the process |
 
 Beyond the original plan the project grew three features that make it a usable product rather than a
 CRUD demo: real-time availability over WebSocket, a notification system with an animated badge, a

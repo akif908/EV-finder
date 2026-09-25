@@ -47,6 +47,9 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
            """)
     List<Object[]> countActiveNowGrouped(@Param("now") LocalDateTime now);
 
+    /** True if any booking (of any status) references this vehicle. */
+    boolean existsByVehicleId(String vehicleId);
+
     List<Booking> findByServiceIdAndStatusInAndStartTimeBetween(String serviceId,
                                                                 List<com.example.EV_finder_api.entity.BookingStatus> statuses,
                                                                 LocalDateTime start,

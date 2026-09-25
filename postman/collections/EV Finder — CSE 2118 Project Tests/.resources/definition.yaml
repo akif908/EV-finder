@@ -24,3 +24,5 @@ variables:
   bookingId: ""
   fuelStationId: ""
   slotDate: ""
+  payOkBookingId: ""
+  failBookingId: ""

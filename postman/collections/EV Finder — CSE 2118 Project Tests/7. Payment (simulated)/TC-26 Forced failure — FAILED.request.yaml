@@ -1,5 +1,9 @@
 $kind: http-request
-url: "{{baseUrl}}/api/payments/{{bookingId}}"
+description: |-
+  Expected 200 with "status": "FAILED" — the simulated gateway's failure path, which releases the slot.
+
+  Self-contained — the pre-request script creates a dedicated unpaid booking (12:00-13:00) so it never reuses the booking TC-25 already paid.
+url: "{{baseUrl}}/api/payments/{{failBookingId}}"
 method: POST
 headers:
   Authorization: Bearer {{userToken}}
@@ -12,6 +16,32 @@ body:
       "forceFailure": true
     }
 scripts:
+  - type: beforeRequest
+    code: |-
+      // TC-26 needs its OWN unpaid booking. Reusing the booking TC-25 already paid
+      // returns 400 'Booking is already paid and confirmed' instead of FAILED.
+      const base = pm.collectionVariables.get('baseUrl');
+      if (pm.collectionVariables.get('failBookingId')) return;
+      pm.sendRequest({
+          url: base + '/api/bookings',
+          method: 'POST',
+          header: { 'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') },
+          body: { mode: 'raw', raw: JSON.stringify({
+              vehicleId: pm.collectionVariables.get('vehicleId'),
+              serviceId: pm.collectionVariables.get('serviceId'),
+              startTime: pm.collectionVariables.get('slotDate') + 'T12:00:00',
+              endTime:   pm.collectionVariables.get('slotDate') + 'T13:00:00' }) }
+      }, (err, res) => {
+          const b = res && res.json ? res.json() : null;
+          if (b && b.id) {
+              pm.collectionVariables.set('failBookingId', b.id);
+              console.log('TC-26: created booking ' + b.id + ' for the forced failure');
+          } else {
+              console.log('TC-26: could not create a booking — reset collection variables and retry');
+          }
+      });
+    language: text/javascript
   - type: afterResponse
     code: pm.test('TC-26 payment FAILED', () => pm.expect(pm.response.json().status).to.eql('FAILED'));
     language: text/javascript

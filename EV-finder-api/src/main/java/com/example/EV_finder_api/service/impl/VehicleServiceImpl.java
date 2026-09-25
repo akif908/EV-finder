@@ -6,7 +6,9 @@ import com.example.EV_finder_api.entity.User;
 import com.example.EV_finder_api.entity.Vehicle;
 import com.example.EV_finder_api.exception.DuplicateResourceException;
 import com.example.EV_finder_api.exception.ForbiddenException;
+import com.example.EV_finder_api.exception.ResourceInUseException;
 import com.example.EV_finder_api.exception.ResourceNotFoundException;
+import com.example.EV_finder_api.repository.BookingRepository;
 import com.example.EV_finder_api.repository.VehicleRepository;
 import com.example.EV_finder_api.security.CurrentUserProvider;
 import com.example.EV_finder_api.service.VehicleService;
@@ -20,10 +22,14 @@ import java.util.List;
 public class VehicleServiceImpl implements VehicleService {
 
     private final VehicleRepository vehicleRepository;
+    private final BookingRepository bookingRepository;
     private final CurrentUserProvider currentUserProvider;
 
-    public VehicleServiceImpl(VehicleRepository vehicleRepository, CurrentUserProvider currentUserProvider) {
+    public VehicleServiceImpl(VehicleRepository vehicleRepository,
+                              BookingRepository bookingRepository,
+                              CurrentUserProvider currentUserProvider) {
         this.vehicleRepository = vehicleRepository;
+        this.bookingRepository = bookingRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -71,7 +77,15 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     public void delete(String vehicleId) {
-        vehicleRepository.delete(getOwnedVehicle(vehicleId));
+        Vehicle vehicle = getOwnedVehicle(vehicleId);
+        // Bookings reference the vehicle, and the FK is ON DELETE RESTRICT, so an
+        // unguarded delete would surface as a 500. Refuse it with a clear 409 and
+        // keep the booking history intact.
+        if (bookingRepository.existsByVehicleId(vehicleId)) {
+            throw new ResourceInUseException(
+                    "This vehicle has booking history and cannot be deleted: " + vehicle.getRegistrationNo());
+        }
+        vehicleRepository.delete(vehicle);
     }
 
     /** Central ownership rule: only the owner (or an ADMIN) may touch a vehicle. */

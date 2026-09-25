@@ -26,6 +26,11 @@ Wait for this line before taking any screenshots:
 Started EvFinderApiApplication in ... seconds
 ```
 
+> **Rebuild first if you have an older backend running.** A defect was found and fixed during
+> testing: `DELETE /api/vehicles/{id}` used to answer **500** (instead of 409) for a vehicle with
+> booking history. If your backend was started before that fix, TC-50 in the results table reports
+> 500. Rebuild and restart (`mvnw spring-boot:run` picks up the compiled classes) so the fix is live.
+
 ---
 
 ## Route A — Postman

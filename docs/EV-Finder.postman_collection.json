@@ -53,6 +53,14 @@
     {
       "key": "failBookingId",
       "value": ""
+    },
+    {
+      "key": "testRegNo",
+      "value": ""
+    },
+    {
+      "key": "createdVehicleId",
+      "value": ""
     }
   ],
   "item": [
@@ -309,9 +317,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "// Pick a vehicle that is NOT test data. A booking attached to a TST-*",
+                  "// vehicle makes that vehicle undeletable (the API answers 409 for a",
+                  "// vehicle with booking history), which is what left stale rows behind.",
                   "const list = pm.response.json();",
-                  "pm.test('at least one vehicle exists', () => pm.expect(list.length).to.be.above(0));",
-                  "pm.collectionVariables.set('vehicleId', list[0].id);"
+                  "const all = Array.isArray(list) ? list : [];",
+                  "pm.test('at least one vehicle exists', () => pm.expect(all.length).to.be.above(0));",
+                  "const real = all.filter(v => !(v.registrationNo || '').toUpperCase().startsWith('TST-'));",
+                  "const pick = real[0] || all[0];",
+                  "pm.collectionVariables.set('vehicleId', pick ? pick.id : '');",
+                  "console.log('setup: bookings will use vehicle ' + (pick ? pick.registrationNo : 'none'));"
                 ]
               }
             }
@@ -338,7 +353,8 @@
                 "vehicles",
                 "my"
               ]
-            }
+            },
+            "description": "Saves the vehicle id used by the booking and payment cases.\n\nDeliberately prefers a non-test vehicle: bookings attached to a TST-* vehicle would make it undeletable, since the API refuses to delete a vehicle that has booking history (409)."
           }
         },
         {
@@ -608,11 +624,48 @@
           "name": "TC-06 POST /api/vehicles (201)",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// TC-06 used to fail with 409 on a second run: the registration number was",
+                  "// fixed ('TST-AC-001') and that column is GLOBALLY unique, so the row created",
+                  "// by the previous run still occupied it.",
+                  "//",
+                  "// Two safeguards:",
+                  "//   1. a fresh registration number for every run, so a collision is",
+                  "//      impossible even if cleanup never happens;",
+                  "//   2. best-effort deletion of leftover TST-* vehicles so the garage does",
+                  "//      not accumulate test data.",
+                  "const base = pm.collectionVariables.get('baseUrl');",
+                  "const auth = { 'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') };",
+                  "",
+                  "pm.collectionVariables.set('testRegNo', 'TST-' + Date.now().toString().slice(-8));",
+                  "",
+                  "pm.sendRequest({ url: base + '/api/vehicles/my', method: 'GET', header: auth }, (err, res) => {",
+                  "    const list = res && res.json ? res.json() : [];",
+                  "    const stale = (Array.isArray(list) ? list : [])",
+                  "        .filter(v => (v.registrationNo || '').toUpperCase().startsWith('TST-'));",
+                  "    console.log('TC-06: registration for this run = ' + pm.collectionVariables.get('testRegNo'));",
+                  "    console.log('TC-06: deleting ' + stale.length + ' leftover test vehicle(s)');",
+                  "    stale.forEach(v => {",
+                  "        pm.sendRequest({ url: base + '/api/vehicles/' + v.id, method: 'DELETE', header: auth },",
+                  "            () => {});",
+                  "    });",
+                  "});"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('TC-06 status is 201', () => pm.response.to.have.status(201));"
+                  "pm.test('TC-06 status is 201', () => pm.response.to.have.status(201));",
+                  "const v = pm.response.json();",
+                  "pm.test('registration number is the unique test value',",
+                  "    () => pm.expect(v.registrationNo).to.eql(pm.collectionVariables.get('testRegNo')));",
+                  "pm.collectionVariables.set('createdVehicleId', v.id);"
                 ]
               }
             }
@@ -631,7 +684,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"manufacturer\": \"Test\",\n  \"model\": \"Acceptance Car\",\n  \"vehicleType\": \"ELECTRIC_CAR\",\n  \"connectorType\": \"CCS2\",\n  \"batteryCapacityKwh\": 60,\n  \"registrationNo\": \"TST-AC-001\"\n}"
+              "raw": "{\n  \"manufacturer\": \"Test\",\n  \"model\": \"Acceptance Car\",\n  \"vehicleType\": \"ELECTRIC_CAR\",\n  \"connectorType\": \"CCS2\",\n  \"batteryCapacityKwh\": 60,\n  \"registrationNo\": \"{{testRegNo}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/vehicles",
@@ -642,8 +695,53 @@
                 "api",
                 "vehicles"
               ]
-            }
+            },
+            "description": "Expected 201 Created.\n\nThe registration number is generated fresh for each run and any leftover TST-* vehicle is removed first, so repeated runs no longer collide (that column is globally unique)."
           }
+        },
+        {
+          "name": "TC-07 PUT /api/vehicles/{id} (200)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehicles/{{createdVehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehicles",
+                "{{createdVehicleId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"manufacturer\": \"Test\",\n  \"model\": \"Acceptance Car v2\",\n  \"vehicleType\": \"ELECTRIC_CAR\",\n  \"connectorType\": \"CCS2\",\n  \"batteryCapacityKwh\": 64,\n  \"registrationNo\": \"{{testRegNo}}\"\n}"
+            },
+            "description": "Expected 200 OK with the updated model.\n\nKeeps the same registration number, which the service explicitly allows for an update of the same vehicle. Requires TC-06 to have run (it saves createdVehicleId)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-07 status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('model was updated', () => pm.expect(pm.response.json().model).to.eql('Acceptance Car v2'));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "TC-08 PUT non-existent vehicle (404)",
@@ -686,6 +784,46 @@
               ]
             }
           }
+        },
+        {
+          "name": "TC-09 DELETE /api/vehicles/{id} (204)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehicles/{{createdVehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehicles",
+                "{{createdVehicleId}}"
+              ]
+            },
+            "description": "Expected 204 No Content with an empty body.\n\nDeletes the vehicle TC-06 created, so a normal run leaves the garage as it found it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-09 status is 204', () => pm.response.to.have.status(204));",
+                  "pm.collectionVariables.set('createdVehicleId', '');"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "TC-10 DELETE non-existent vehicle (404)",
@@ -1748,6 +1886,72 @@
               ]
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "9. Teardown (optional cleanup)",
+      "description": "Removes test data this collection creates. Run it last. Safe to run any number of times.",
+      "item": [
+        {
+          "name": "Cleanup: delete all test vehicles (TST-*)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehicles/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehicles",
+                "my"
+              ]
+            },
+            "description": "Lists the user's vehicles and deletes every one whose registration number starts with TST-. Run this last to leave the demo database clean; use it after an interrupted run to clear a stale vehicle that would otherwise cause TC-06 to answer 409.\n\nA vehicle that already has bookings is reported as kept rather than removed: the API refuses to delete a vehicle with booking history (409) so that booking records are not orphaned. That is intended behaviour, not a failure."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sweeps every leftover TST-* vehicle, including those from a run that was",
+                  "// aborted before TC-09 could delete the vehicle it created.",
+                  "const base = pm.collectionVariables.get('baseUrl');",
+                  "const auth = { 'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') };",
+                  "const list = pm.response.json();",
+                  "const stale = (Array.isArray(list) ? list : [])",
+                  "    .filter(v => (v.registrationNo || '').toUpperCase().startsWith('TST-'));",
+                  "pm.test('TC-teardown status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('teardown sweep ran', () => {",
+                  "    console.log('teardown: ' + stale.length + ' test vehicle(s) to remove');",
+                  "    stale.forEach(v => pm.sendRequest({",
+                  "        url: base + '/api/vehicles/' + v.id, method: 'DELETE', header: auth",
+                  "    }, (err, res) => {",
+                  "        if (res && res.code === 204) {",
+                  "            console.log('  removed ' + v.registrationNo);",
+                  "        } else {",
+                  "            console.log('  kept ' + v.registrationNo + ' (HTTP ' + (res ? res.code : '?') +",
+                  "                        ') \u2014 a vehicle with booking history cannot be deleted');",
+                  "        }",
+                  "    }));",
+                  "    pm.expect(true).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

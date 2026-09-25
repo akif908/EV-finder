@@ -1,13 +1,20 @@
-"""Make the Postman collection's state-dependent cases self-contained.
+"""Fix the stale-vehicle (409) failure in the Postman collection.
 
-TC-23, TC-24 and TC-26 previously assumed the caller had already created a
-booking (TC-16) or was running on a service whose capacity was already full.
-Each now carries a pre-request script that establishes the state it needs:
+Root cause: TC-06 created a vehicle with a FIXED registration number
+("TST-AC-001"), and the column is globally unique, so a second run hit
+409 Conflict. The collection also never deleted the vehicle, so the row
+survived every run.
 
-  TC-23  picks one of the user's existing bookings if bookingId is unset
-  TC-24  fills its own window (05:00-06:00) until the service reports 409
-  TC-25  creates a dedicated unpaid booking (11:00-12:00) to pay
-  TC-26  creates a dedicated unpaid booking (12:00-13:00) for the failure path
+Three changes, addressing the cause and both suggested mitigations:
+
+  1. TC-06 generates a UNIQUE registration number per run, so a collision is
+     impossible by construction (`testRegNo` = TST-<run stamp>).
+  2. TC-06 gains a pre-request script that deletes leftover TST-* vehicles,
+     so the list cannot grow and any historical duplicate is cleared.
+  3. TC-07 (update 200) and TC-09 (delete 204) are added so the collection
+     exercises the full CRUD cycle and removes what it created, plus a
+     "9. Teardown" folder that sweeps any remaining test vehicles — which
+     also cleans up after a run that was aborted part-way.
 
 Run:  python docs/patch_postman_collection.py
 """
@@ -20,15 +27,14 @@ OD = collections.OrderedDict
 
 coll = json.load(io.open(PATH, encoding="utf-8"), object_pairs_hook=OD)
 
-# ---- extra collection variables ------------------------------------------
-existing = {v["key"] for v in coll["variable"]}
-for key in ("payOkBookingId", "failBookingId"):
-    if key not in existing:
+# ---- variables ------------------------------------------------------------
+have = {v["key"] for v in coll["variable"]}
+for key in ("testRegNo", "createdVehicleId"):
+    if key not in have:
         coll["variable"].append(OD([("key", key), ("value", "")]))
 
 
 def find(items, prefix):
-    """Depth-first lookup of a request whose name starts with `prefix`."""
     for item in items:
         if "item" in item:
             hit = find(item["item"], prefix)
@@ -39,8 +45,14 @@ def find(items, prefix):
     return None
 
 
+def find_folder(items, prefix):
+    for item in items:
+        if "item" in item and item.get("name", "").startswith(prefix):
+            return item
+    return None
+
+
 def set_prereq(request, lines):
-    """Attach (or replace) a pre-request script built from a list of lines."""
     request.setdefault("event", [])
     request["event"] = [e for e in request["event"] if e["listen"] != "prerequest"]
     request["event"].insert(0, OD([
@@ -49,169 +61,216 @@ def set_prereq(request, lines):
     ]))
 
 
-def set_url(request, path_suffix):
-    """Rewrite a request URL to {{baseUrl}} + path_suffix."""
-    request["url"] = OD([
-        ("raw", "{{baseUrl}}" + path_suffix),
-        ("host", ["{{baseUrl}}"]),
-        ("path", [seg for seg in path_suffix.strip("/").split("/")]),
+def auth_header(token_var):
+    return [
+        OD([("key", "Authorization"), ("value", "Bearer {{%s}}" % token_var)]),
+        OD([("key", "Content-Type"), ("value", "application/json")]),
+    ]
+
+
+def json_request(name, method, path_suffix, token_var, body=None, tests=None,
+                 description=None, prereq=None):
+    """Build a Postman request item."""
+    item = OD([
+        ("name", name),
+        ("request", OD([
+            ("method", method),
+            ("header", auth_header(token_var)),
+            ("url", OD([
+                ("raw", "{{baseUrl}}" + path_suffix),
+                ("host", ["{{baseUrl}}"]),
+                ("path", [s for s in path_suffix.strip("/").split("/")]),
+            ])),
+        ])),
     ])
+    if body is not None:
+        item["request"]["body"] = OD([("mode", "raw"), ("raw", body)])
+    if description:
+        item["request"]["description"] = description
+    events = []
+    if prereq:
+        events.append(OD([("listen", "prerequest"),
+                          ("script", OD([("type", "text/javascript"), ("exec", prereq)]))]))
+    if tests:
+        events.append(OD([("listen", "test"),
+                          ("script", OD([("type", "text/javascript"), ("exec", tests)]))]))
+    if events:
+        item["event"] = events
+    return item
 
 
 # ---------------------------------------------------------------------------
-# TC-23 — 403 when another user fetches a booking they do not own
+# 1 + 2. TC-06 — unique registration number per run, plus hygiene sweep
 # ---------------------------------------------------------------------------
-tc23 = find(coll["item"], "TC-23")
-set_prereq(tc23, [
-    "// TC-23 needs a booking owned by the USER, not the operator.",
-    "// If none is stored yet, take the user's most recent booking so the request",
-    "// also works when run straight after the logins.",
+tc06 = find(coll["item"], "TC-06")
+set_prereq(tc06, [
+    "// TC-06 used to fail with 409 on a second run: the registration number was",
+    "// fixed ('TST-AC-001') and that column is GLOBALLY unique, so the row created",
+    "// by the previous run still occupied it.",
+    "//",
+    "// Two safeguards:",
+    "//   1. a fresh registration number for every run, so a collision is",
+    "//      impossible even if cleanup never happens;",
+    "//   2. best-effort deletion of leftover TST-* vehicles so the garage does",
+    "//      not accumulate test data.",
     "const base = pm.collectionVariables.get('baseUrl');",
-    "if (!pm.collectionVariables.get('bookingId')) {",
-    "    pm.sendRequest({",
-    "        url: base + '/api/bookings/my',",
-    "        method: 'GET',",
-    "        header: { 'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') }",
-    "    }, (err, res) => {",
-    "        const list = res && res.json ? res.json() : [];",
-    "        if (Array.isArray(list) && list.length) {",
-    "            pm.collectionVariables.set('bookingId', list[0].id);",
-    "            console.log('TC-23: using booking ' + list[0].id + ' owned by the user');",
-    "        } else {",
-    "            console.log('TC-23: no bookings found — run folder 6, TC-16 first');",
-    "        }",
+    "const auth = { 'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') };",
+    "",
+    "pm.collectionVariables.set('testRegNo', 'TST-' + Date.now().toString().slice(-8));",
+    "",
+    "pm.sendRequest({ url: base + '/api/vehicles/my', method: 'GET', header: auth }, (err, res) => {",
+    "    const list = res && res.json ? res.json() : [];",
+    "    const stale = (Array.isArray(list) ? list : [])",
+    "        .filter(v => (v.registrationNo || '').toUpperCase().startsWith('TST-'));",
+    "    console.log('TC-06: registration for this run = ' + pm.collectionVariables.get('testRegNo'));",
+    "    console.log('TC-06: deleting ' + stale.length + ' leftover test vehicle(s)');",
+    "    stale.forEach(v => {",
+    "        pm.sendRequest({ url: base + '/api/vehicles/' + v.id, method: 'DELETE', header: auth },",
+    "            () => {});",
     "    });",
-    "}",
-])
-tc23["request"]["description"] = (
-    "Expected 403 Forbidden: the operator is authenticated but does not own this booking.\n\n"
-    "Self-contained — if no bookingId is stored, the pre-request script picks one of the user's "
-    "existing bookings. Ownership is checked before status, so this returns 403 even for a "
-    "cancelled booking. Needs the user and operator tokens from folder 1."
-)
-
-# ---------------------------------------------------------------------------
-# TC-24 — 409 when the requested window is already at capacity
-# ---------------------------------------------------------------------------
-tc24 = find(coll["item"], "TC-24")
-set_prereq(tc24, [
-    "// TC-24 only returns 409 when the service is FULL for the requested window.",
-    "// This pre-request fills capacity in a dedicated window (05:00-06:00) so the",
-    "// case stands alone and never eats into the window TC-16 uses.",
-    "const base = pm.collectionVariables.get('baseUrl');",
-    "const payload = JSON.stringify({",
-    "    vehicleId: pm.collectionVariables.get('vehicleId'),",
-    "    serviceId: pm.collectionVariables.get('serviceId'),",
-    "    startTime: pm.collectionVariables.get('slotDate') + 'T05:00:00',",
-    "    endTime:   pm.collectionVariables.get('slotDate') + 'T06:00:00'",
     "});",
-    "let attempt = 0;",
-    "(function fill() {",
-    "    if (attempt++ >= 8) {",
-    "        console.log('TC-24: could not fill capacity in 8 attempts');",
-    "        return;",
-    "    }",
-    "    pm.sendRequest({",
-    "        url: base + '/api/bookings',",
-    "        method: 'POST',",
-    "        header: { 'Content-Type': 'application/json',",
-    "                  'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') },",
-    "        body: { mode: 'raw', raw: payload }",
-    "    }, (err, res) => {",
-    "        if (res && res.code === 409) {",
-    "            console.log('TC-24: window full after ' + (attempt - 1) + ' booking(s); 409 expected next');",
-    "        } else {",
-    "            fill();",
-    "        }",
-    "    });",
-    "})();",
 ])
-tc24["request"]["body"]["raw"] = (
+tc06["request"]["body"]["raw"] = (
     "{\n"
-    '  "vehicleId": "{{vehicleId}}",\n'
-    '  "serviceId": "{{serviceId}}",\n'
-    '  "startTime": "{{slotDate}}T05:00:00",\n'
-    '  "endTime": "{{slotDate}}T06:00:00"\n'
+    '  "manufacturer": "Test",\n'
+    '  "model": "Acceptance Car",\n'
+    '  "vehicleType": "ELECTRIC_CAR",\n'
+    '  "connectorType": "CCS2",\n'
+    '  "batteryCapacityKwh": 60,\n'
+    '  "registrationNo": "{{testRegNo}}"\n'
     "}"
 )
-tc24["request"]["description"] = (
-    "Expected 409 Conflict with the message \"No free slots left for the selected time\".\n\n"
-    "Self-contained — the pre-request script reserves the 05:00-06:00 window until the service is "
-    "full, then this request asks for one more slot. This is the double-booking rule under test."
+# keep the existing 201 assertion, add id capture
+test_ev = [e for e in tc06.get("event", []) if e["listen"] == "test"][0]
+test_ev["script"]["exec"] = [
+    "pm.test('TC-06 status is 201', () => pm.response.to.have.status(201));",
+    "const v = pm.response.json();",
+    "pm.test('registration number is the unique test value',",
+    "    () => pm.expect(v.registrationNo).to.eql(pm.collectionVariables.get('testRegNo')));",
+    "pm.collectionVariables.set('createdVehicleId', v.id);",
+]
+tc06["request"]["description"] = (
+    "Expected 201 Created.\n\n"
+    "The registration number is generated fresh for each run and any leftover TST-* vehicle is "
+    "removed first, so repeated runs no longer collide (that column is globally unique)."
 )
 
 # ---------------------------------------------------------------------------
-# TC-25 — SUCCESS on a freshly created booking
+# vehicles folder: insert TC-07 after TC-06, and TC-09 after TC-08
 # ---------------------------------------------------------------------------
-tc25 = find(coll["item"], "TC-25")
-set_prereq(tc25, [
-    "// A booking can only be paid once: paying it again returns",
-    "// 400 'Booking is already paid and confirmed'. So this case creates its own",
-    "// dedicated booking the first time it runs.",
-    "const base = pm.collectionVariables.get('baseUrl');",
-    "if (pm.collectionVariables.get('payOkBookingId')) return;",
-    "pm.sendRequest({",
-    "    url: base + '/api/bookings',",
-    "    method: 'POST',",
-    "    header: { 'Content-Type': 'application/json',",
-    "              'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') },",
-    "    body: { mode: 'raw', raw: JSON.stringify({",
-    "        vehicleId: pm.collectionVariables.get('vehicleId'),",
-    "        serviceId: pm.collectionVariables.get('serviceId'),",
-    "        startTime: pm.collectionVariables.get('slotDate') + 'T11:00:00',",
-    "        endTime:   pm.collectionVariables.get('slotDate') + 'T12:00:00' }) }",
-    "}, (err, res) => {",
-    "    const b = res && res.json ? res.json() : null;",
-    "    if (b && b.id) {",
-    "        pm.collectionVariables.set('payOkBookingId', b.id);",
-    "        console.log('TC-25: created booking ' + b.id + ' to pay');",
-    "    } else {",
-    "        console.log('TC-25: could not create a booking — reset collection variables and retry');",
-    "    }",
-    "});",
-])
-set_url(tc25["request"], "/api/payments/{{payOkBookingId}}")
-tc25["request"]["description"] = (
-    "Expected 200 with \"status\": \"SUCCESS\" and a SIM-<reference> transaction number.\n\n"
-    "Self-contained — the pre-request script creates a fresh PENDING booking (11:00-12:00) on the "
-    "first run, because a booking can only be paid once."
+vehicles = find_folder(coll["item"], "4. Vehicles")
+
+tc07 = json_request(
+    "TC-07 PUT /api/vehicles/{id} (200)",
+    "PUT", "/api/vehicles/{{createdVehicleId}}", "userToken",
+    body=("{\n"
+          '  "manufacturer": "Test",\n'
+          '  "model": "Acceptance Car v2",\n'
+          '  "vehicleType": "ELECTRIC_CAR",\n'
+          '  "connectorType": "CCS2",\n'
+          '  "batteryCapacityKwh": 64,\n'
+          '  "registrationNo": "{{testRegNo}}"\n'
+          "}"),
+    tests=[
+        "pm.test('TC-07 status is 200', () => pm.response.to.have.status(200));",
+        "pm.test('model was updated', () => pm.expect(pm.response.json().model).to.eql('Acceptance Car v2'));",
+    ],
+    description=("Expected 200 OK with the updated model.\n\n"
+                 "Keeps the same registration number, which the service explicitly allows for an "
+                 "update of the same vehicle. Requires TC-06 to have run (it saves createdVehicleId)."),
+)
+
+tc09 = json_request(
+    "TC-09 DELETE /api/vehicles/{id} (204)",
+    "DELETE", "/api/vehicles/{{createdVehicleId}}", "userToken",
+    tests=[
+        "pm.test('TC-09 status is 204', () => pm.response.to.have.status(204));",
+        "pm.collectionVariables.set('createdVehicleId', '');",
+    ],
+    description=("Expected 204 No Content with an empty body.\n\n"
+                 "Deletes the vehicle TC-06 created, so a normal run leaves the garage as it found it."),
+)
+
+# rebuild the folder in the intended CRUD order
+order = {"TC-06": 0, "TC-07": 1, "TC-08": 2, "TC-09": 3, "TC-10": 4}
+items = [i for i in vehicles["item"] if not i.get("name", "").startswith(("TC-07", "TC-09"))]
+items.append(tc07)
+items.append(tc09)
+items.sort(key=lambda i: order.get(i.get("name", "")[:5], 99))
+vehicles["item"] = items
+
+# ---------------------------------------------------------------------------
+# Setup: pick a REAL vehicle, so bookings never attach to a test vehicle
+# ---------------------------------------------------------------------------
+setup_vehicle = find(coll["item"], "Save vehicle id")
+setup_vehicle["event"] = [e for e in setup_vehicle.get("event", []) if e["listen"] != "test"]
+setup_vehicle["event"].append(OD([
+    ("listen", "test"),
+    ("script", OD([("type", "text/javascript"), ("exec", [
+        "// Pick a vehicle that is NOT test data. A booking attached to a TST-*",
+        "// vehicle makes that vehicle undeletable (the API answers 409 for a",
+        "// vehicle with booking history), which is what left stale rows behind.",
+        "const list = pm.response.json();",
+        "const all = Array.isArray(list) ? list : [];",
+        "pm.test('at least one vehicle exists', () => pm.expect(all.length).to.be.above(0));",
+        "const real = all.filter(v => !(v.registrationNo || '').toUpperCase().startsWith('TST-'));",
+        "const pick = real[0] || all[0];",
+        "pm.collectionVariables.set('vehicleId', pick ? pick.id : '');",
+        "console.log('setup: bookings will use vehicle ' + (pick ? pick.registrationNo : 'none'));",
+    ])])),
+]))
+setup_vehicle["request"]["description"] = (
+    "Saves the vehicle id used by the booking and payment cases.\n\n"
+    "Deliberately prefers a non-test vehicle: bookings attached to a TST-* vehicle would make it "
+    "undeletable, since the API refuses to delete a vehicle that has booking history (409)."
 )
 
 # ---------------------------------------------------------------------------
-# TC-26 — FAILED on its own unpaid booking
+# 3. teardown folder
 # ---------------------------------------------------------------------------
-tc26 = find(coll["item"], "TC-26")
-set_prereq(tc26, [
-    "// TC-26 needs its OWN unpaid booking. Reusing the booking TC-25 already paid",
-    "// returns 400 'Booking is already paid and confirmed' instead of FAILED.",
-    "const base = pm.collectionVariables.get('baseUrl');",
-    "if (pm.collectionVariables.get('failBookingId')) return;",
-    "pm.sendRequest({",
-    "    url: base + '/api/bookings',",
-    "    method: 'POST',",
-    "    header: { 'Content-Type': 'application/json',",
-    "              'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') },",
-    "    body: { mode: 'raw', raw: JSON.stringify({",
-    "        vehicleId: pm.collectionVariables.get('vehicleId'),",
-    "        serviceId: pm.collectionVariables.get('serviceId'),",
-    "        startTime: pm.collectionVariables.get('slotDate') + 'T12:00:00',",
-    "        endTime:   pm.collectionVariables.get('slotDate') + 'T13:00:00' }) }",
-    "}, (err, res) => {",
-    "    const b = res && res.json ? res.json() : null;",
-    "    if (b && b.id) {",
-    "        pm.collectionVariables.set('failBookingId', b.id);",
-    "        console.log('TC-26: created booking ' + b.id + ' for the forced failure');",
-    "    } else {",
-    "        console.log('TC-26: could not create a booking — reset collection variables and retry');",
-    "    }",
-    "});",
+teardown = OD([
+    ("name", "9. Teardown (optional cleanup)"),
+    ("description", "Removes test data this collection creates. Run it last. Safe to run any "
+                    "number of times."),
+    ("item", [json_request(
+        "Cleanup: delete all test vehicles (TST-*)",
+        "GET", "/api/vehicles/my", "userToken",
+        tests=[
+            "// Sweeps every leftover TST-* vehicle, including those from a run that was",
+            "// aborted before TC-09 could delete the vehicle it created.",
+            "const base = pm.collectionVariables.get('baseUrl');",
+            "const auth = { 'Authorization': 'Bearer ' + pm.collectionVariables.get('userToken') };",
+            "const list = pm.response.json();",
+            "const stale = (Array.isArray(list) ? list : [])",
+            "    .filter(v => (v.registrationNo || '').toUpperCase().startsWith('TST-'));",
+            "pm.test('TC-teardown status is 200', () => pm.response.to.have.status(200));",
+            "pm.test('teardown sweep ran', () => {",
+            "    console.log('teardown: ' + stale.length + ' test vehicle(s) to remove');",
+            "    stale.forEach(v => pm.sendRequest({",
+            "        url: base + '/api/vehicles/' + v.id, method: 'DELETE', header: auth",
+            "    }, (err, res) => {",
+            "        if (res && res.code === 204) {",
+            "            console.log('  removed ' + v.registrationNo);",
+            "        } else {",
+            "            console.log('  kept ' + v.registrationNo + ' (HTTP ' + (res ? res.code : '?') +",
+            "                        ') — a vehicle with booking history cannot be deleted');",
+            "        }",
+            "    }));",
+            "    pm.expect(true).to.be.true;",
+            "});",
+        ],
+        description=("Lists the user's vehicles and deletes every one whose registration number "
+                     "starts with TST-. Run this last to leave the demo database clean; use it "
+                     "after an interrupted run to clear a stale vehicle that would otherwise cause "
+                     "TC-06 to answer 409.\n\n"
+                     "A vehicle that already has bookings is reported as kept rather than removed: "
+                     "the API refuses to delete a vehicle with booking history (409) so that "
+                     "booking records are not orphaned. That is intended behaviour, not a failure."),
+    )]),
 ])
-set_url(tc26["request"], "/api/payments/{{failBookingId}}")
-tc26["request"]["description"] = (
-    "Expected 200 with \"status\": \"FAILED\" — the simulated gateway's failure path, which "
-    "releases the slot.\n\nSelf-contained — the pre-request script creates a dedicated unpaid "
-    "booking (12:00-13:00) so it never reuses the booking TC-25 already paid."
-)
+
+coll["item"] = [i for i in coll["item"] if not i.get("name", "").startswith("9. Teardown")]
+coll["item"].append(teardown)
 
 io.open(PATH, "w", encoding="utf-8").write(json.dumps(coll, indent=2) + "\n")
-print("collection patched")
+print("collection patched: unique TC-06 data, TC-07/TC-09 added, teardown folder appended")

@@ -6,6 +6,8 @@ localResources:
   collections:
     - ../docs/EV-Finder.postman_collection.json
 
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
 cloudResources:
   collections:
-    ../postman/collections/EV Finder — CSE 2118 Project Tests: a1717557-8c64-4a1f-877c-17bf0eb27ba9
+    ../postman/collections/EV Finder — CSE 2118 Project Tests: 2e156fbd-5b6c-4749-82d5-5d86962eb615

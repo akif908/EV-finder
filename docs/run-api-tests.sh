@@ -69,7 +69,13 @@ STATION_ID=$(curl -s -m 15 "$BASE/api/stations" -H "Authorization: Bearer $UTOK"
 STATION_NAME=$(curl -s -m 15 "$BASE/api/stations" -H "Authorization: Bearer $UTOK" | jget "[0]['name']")
 SERVICE_ID=$(curl -s -m 15 "$BASE/api/stations/$STATION_ID" -H "Authorization: Bearer $UTOK" \
              | jget "['services'][0]['id']")
-VEHICLE_ID=$(curl -s -m 15 "$BASE/api/vehicles/my" -H "Authorization: Bearer $UTOK" | jget "[0]['id']")
+# Prefer the user's real vehicle: bookings attached to a TST-* test vehicle
+# would make it undeletable (the API refuses to delete a vehicle with history).
+VEHICLE_ID=$(curl -s -m 15 "$BASE/api/vehicles/my" -H "Authorization: Bearer $UTOK" | python -c "
+import sys,json
+vs=json.load(sys.stdin)
+real=[v for v in vs if not v['registrationNo'].upper().startswith('TST-')]
+print((real or vs)[0]['id'] if vs else '')" 2>/dev/null)
 SLOT_DATE=$(python -c "import datetime;print((datetime.date.today()+datetime.timedelta(days=1)).isoformat())")
 SLOT_START="${SLOT_DATE}T10:00:00"
 SLOT_END="${SLOT_DATE}T11:00:00"
@@ -91,16 +97,28 @@ case_run TC-05 400 POST /api/auth/register - \
   '{"name":"","email":"not-an-email","password":"123"}'
 
 # ---------------- 2. Vehicles -------------------------------------------
-case_run TC-06 201 POST /api/vehicles "$UTOK" \
-  '{"manufacturer":"Test","model":"Acceptance Car","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":60,"registrationNo":"TST-AC-001"}'
-NEW_VEHICLE_ID=$(curl -s -m 15 "$BASE/api/vehicles/my" -H "Authorization: Bearer $UTOK" \
-                 | python -c "import sys,json;print([v['id'] for v in json.load(sys.stdin) if v.get('registrationNo')=='TST-AC-001'][0])" 2>/dev/null)
-case_run TC-07 200 PUT  "/api/vehicles/$NEW_VEHICLE_ID" "$UTOK" \
-  '{"manufacturer":"Test","model":"Acceptance Car v2","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":64,"registrationNo":"TST-AC-001"}'
-case_run TC-08 404 PUT  /api/vehicles/does-not-exist "$UTOK" \
-  '{"manufacturer":"X","model":"Y","vehicleType":"ELECTRIC_CAR","connectorType":"CCS2","batteryCapacityKwh":50,"registrationNo":"TST-XX-999"}'
+# A unique registration number per run. The column is GLOBALLY unique, so a
+# fixed value made a second run fail with 409 against a row left by the run
+# before. Unique data removes the collision at its source.
+REG_NO="TST-$(date +%s | tail -c 9)"
+VEHICLE_JSON="{\"manufacturer\":\"Test\",\"model\":\"Acceptance Car\",\"vehicleType\":\"ELECTRIC_CAR\",\"connectorType\":\"CCS2\",\"batteryCapacityKwh\":60,\"registrationNo\":\"$REG_NO\"}"
+VEHICLE_JSON_V2="{\"manufacturer\":\"Test\",\"model\":\"Acceptance Car v2\",\"vehicleType\":\"ELECTRIC_CAR\",\"connectorType\":\"CCS2\",\"batteryCapacityKwh\":64,\"registrationNo\":\"$REG_NO\"}"
+
+# best-effort sweep of anything an interrupted earlier run left behind
+for old in $(curl -s -m 15 "$BASE/api/vehicles/my" -H "Authorization: Bearer $UTOK"              | python -c "import sys,json;print(' '.join(v['id'] for v in json.load(sys.stdin) if v['registrationNo'].upper().startswith('TST-')))" 2>/dev/null); do
+  curl -s -m 15 -o /dev/null -X DELETE "$BASE/api/vehicles/$old" -H "Authorization: Bearer $UTOK"
+done
+
+case_run TC-06 201 POST /api/vehicles "$UTOK" "$VEHICLE_JSON"
+NEW_VEHICLE_ID=$(curl -s -m 15 "$BASE/api/vehicles/my" -H "Authorization: Bearer $UTOK"                  | python -c "import sys,json;print([v['id'] for v in json.load(sys.stdin) if v.get('registrationNo')=='$REG_NO'][0])" 2>/dev/null)
+case_run TC-07 200 PUT  "/api/vehicles/$NEW_VEHICLE_ID" "$UTOK" "$VEHICLE_JSON_V2"
+case_run TC-08 404 PUT  /api/vehicles/does-not-exist "$UTOK" "$VEHICLE_JSON_V2"
 case_run TC-09 204 DELETE "/api/vehicles/$NEW_VEHICLE_ID" "$UTOK"
 case_run TC-10 404 DELETE /api/vehicles/does-not-exist "$UTOK"
+# A vehicle that bookings reference must be refused with 409. Before this was
+# guarded, the FK violation surfaced as an unhandled 500.
+USED_VEHICLE_ID=$(curl -s -m 15 "$BASE/api/bookings/my" -H "Authorization: Bearer $UTOK"                   | python -c "import sys,json;d=json.load(sys.stdin);print(d[0]['vehicleId'] if d else '')" 2>/dev/null)
+case_run TC-50 409 DELETE "/api/vehicles/$USED_VEHICLE_ID" "$UTOK"
 
 # ---------------- 3. Stations, availability, ranking ---------------------
 case_run TC-11 200 GET  /api/stations "$UTOK"
