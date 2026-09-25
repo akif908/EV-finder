@@ -1,0 +1,4 @@
+$kind: collection
+name: 5. Bookings (create / limits / conflict)
+description: "Booking lifecycle. Order matters: TC-16 creates the booking the later cases use, and the fillers below must run before TC-24."
+order: 5000

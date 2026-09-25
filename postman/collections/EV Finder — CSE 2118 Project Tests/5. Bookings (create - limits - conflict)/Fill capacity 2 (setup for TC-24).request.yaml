@@ -1,0 +1,26 @@
+$kind: http-request
+description: "Takes one slot in the 05:00-06:00 window. Run three of these in order: with a capacity of 2 the window is guaranteed to be full, which is what makes TC-24 return 409. On later runs they simply report 409 because it is already full."
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "vehicleId": "{{vehicleId}}",
+      "serviceId": "{{serviceId}}",
+      "startTime": "{{slotDate}}T05:00:00",
+      "endTime": "{{slotDate}}T06:00:00"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      // 201 = a slot was taken, 409 = the window was already full from an
+      // earlier run. Both are fine; what matters is that it is full for TC-24.
+      pm.test('capacity filler accepted',
+          () => pm.expect([201, 409]).to.include(pm.response.code));
+      console.log('filler: HTTP ' + pm.response.code);
+    language: text/javascript
+order: 6000

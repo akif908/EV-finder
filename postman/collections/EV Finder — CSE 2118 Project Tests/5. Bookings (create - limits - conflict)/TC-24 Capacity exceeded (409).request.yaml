@@ -1,0 +1,27 @@
+$kind: http-request
+description: |-
+  Expected 409 Conflict with "No free slots left for the selected time".
+
+  The three 'Fill capacity' requests above must run first — they guarantee the 05:00-06:00 window is at capacity, which is the condition this case tests.
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "vehicleId": "{{vehicleId}}",
+      "serviceId": "{{serviceId}}",
+      "startTime": "{{slotDate}}T05:00:00",
+      "endTime": "{{slotDate}}T06:00:00"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('TC-24 status is 409', () => pm.response.to.have.status(409));
+      pm.test('message explains the conflict',
+          () => pm.expect(pm.response.json().message).to.contain('No free slots'));
+    language: text/javascript
+order: 8000

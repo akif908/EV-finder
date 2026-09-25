@@ -1,0 +1,3 @@
+$kind: collection
+description: Runs after Bookings so the ids exist. Each payment case is preceded by the request that creates its booking.
+order: 6000

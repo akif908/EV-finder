@@ -1,0 +1,25 @@
+$kind: http-request
+description: "Expected 403 Forbidden: the operator is authenticated but does not own this booking. Runs after the Bookings folder, which stores bookingId. Ownership is checked before status, so this returns 403 even for a cancelled booking."
+url: "{{baseUrl}}/api/bookings/{{bookingId}}"
+method: GET
+headers:
+  Authorization: Bearer {{operatorToken}}
+  Content-Type: application/json
+scripts:
+  - type: beforeRequest
+    code: |-
+      // TC-23 needs a booking owned by the USER. The Bookings folder runs before
+      // this one and stores it, so no network call is needed here — a pre-request
+      // script that awaits HTTP is unreliable in the Collection Runner.
+      const id = pm.collectionVariables.get('bookingId');
+      if (!id) {
+          console.error('TC-23: bookingId is empty — run folder 5 (TC-16) first');
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-23 status is 403', () => pm.response.to.have.status(403));
+      pm.test('the API explains that this is not your booking',
+          () => pm.expect(pm.response.json().message).to.contain('own bookings'));
+    language: text/javascript
+order: 5000

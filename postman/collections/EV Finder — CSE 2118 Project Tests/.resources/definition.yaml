@@ -2,17 +2,55 @@ $kind: collection
 description: |-
   Acceptance tests for the EV Charging & Battery-Swap Finder backend.
 
-  HOW TO USE FOR SCREENSHOTS
-  1. Import this file into Postman (File > Import).
-  2. Set the collection variable `baseUrl` (default http://localhost:8080).
-  3. Run the three requests in the `1. Auth` folder first — their test scripts save the JWTs
-     into collection variables, so every later request authenticates automatically.
-  4. Run `2. Setup` once — it saves stationId / serviceId / vehicleId / bookingId that the
-     later requests reuse.
-  5. Open each request, press Send, and screenshot the request (method + URL + body) together
-     with the response (status code + body). That single screenshot is what Section 8 needs.
+  =====================================================
+  RUN EVERYTHING AT ONCE (Collection Runner)
+  =====================================================
+  1. Start MySQL (XAMPP) and the backend, then confirm it answers:
+     http://localhost:8080/api/stations  ->  401
+  2. Hover the collection name in the sidebar -> '...' (More actions) -> 'Run collection'.
+     (Older Postman: click the collection, then the 'Run' button on the Overview tab.)
+  3. Leave the settings as they are: Iterations = 1, Delay = 0, order = the folder order.
+     Do NOT reorder — folder 1 saves the JWTs and folder 2 saves the ids that every
+     later request needs.
+  4. Tick 'Save responses' if you want to click into each response afterwards.
+  5. Press 'Run EV Finder - CSE 2118 Project Tests'.
+  6. Read the results: each request shows PASS/FAIL, status code, time and size.
+     Expect 0 failures. Click any row in 'Run Results' to open that request again.
 
-  Each request carries a `pm.test` assertion, so the Postman test result tab also shows PASS.
+  Folder 9 (Teardown) is optional cleanup — it deletes test vehicles. Include it for a
+  tidy database, or untick it if you want to inspect the created vehicle afterwards.
+
+  =====================================================
+  TAKING THE SECTION 8 SCREENSHOTS
+  =====================================================
+  The Runner proves the suite passes, but the report needs screenshots showing the
+  method, URL, request body and status code. For those, run the individual requests:
+
+  1. Run the three logins in folder 1, then the three requests in folder 2 (Setup) -
+     their test scripts store the token and ids in collection variables.
+  2. Open the request you need, click the 'Body' tab in the REQUEST pane so the JSON is
+     visible, press Send, then screenshot the whole window (status code is top-right of
+     the response pane).
+  3. Figure-to-request mapping is in docs/HOW-TO-SCREENSHOTS.md.
+
+  =====================================================
+  NOTES
+  =====================================================
+  - Collection variable 'baseUrl' defaults to http://localhost:8080.
+  - Folders are ordered so that state is created before it is used, and no request relies
+    on asynchronous code (a pre-request script that awaits an HTTP call can fire after the
+    request in the Runner). Instead:
+      * Folder 5 holds three explicit 'Fill capacity' requests before TC-24, so the window
+        really is full and 409 is guaranteed.
+      * Folder 6 places 'Setup: create booking to pay' before TC-25 and
+        'Setup: create booking for forced failure' before TC-26, because a booking can only
+        be paid once and each payment case needs its own.
+      * TC-16 and the two setup requests pick a RANDOM future window, so repeated runs never
+        collide with slots a previous run already occupied.
+      * TC-23 lives in folder 7 because it needs a booking to exist (created in folder 5).
+  - Open the Postman Console (bottom-left) to see what each script did.
+  - To start completely fresh: Collection -> Variables -> Reset All, then re-run
+    folders 1 and 2.
 variables:
   baseUrl: http://localhost:8080
   userToken: ""
@@ -28,3 +66,5 @@ variables:
   failBookingId: ""
   testRegNo: ""
   createdVehicleId: ""
+  bkStart: ""
+  bkEnd: ""

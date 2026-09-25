@@ -227,78 +227,101 @@ tc24["request"]["description"] = (
     "window is at capacity, which is the condition this case tests."
 )
 
+# TC-50 runs last in this folder on purpose: TC-16 has just created a booking with
+# {{vehicleId}}, so that vehicle certainly has history and the delete must be refused.
+# The request can therefore never actually delete it.
+tc50 = build(
+    "TC-50 DELETE vehicle with booking history (409)",
+    "DELETE", "/api/vehicles/{{vehicleId}}", "userToken",
+    tests=[
+        "pm.test('TC-50 status is 409', () => pm.response.to.have.status(409));",
+        "pm.test('message explains the vehicle cannot be deleted',",
+        "    () => pm.expect(pm.response.json().message).to.contain('booking history'));",
+    ],
+    description=("Expected 409 Conflict. A vehicle referenced by bookings cannot be deleted: the "
+                 "foreign key is ON DELETE RESTRICT, so before the service guarded this the API "
+                 "answered 500. TC-16 above has just booked this vehicle, which is what gives it "
+                 "history, so the delete is always refused and nothing is lost."),
+)
+
 bookings = OD([
     ("name", "5. Bookings (create / limits / conflict)"),
     ("description", "Booking lifecycle. Order matters: TC-16 creates the booking the later cases "
                     "use, and the fillers below must run before TC-24."),
-    ("item", [tc16, tc17, tc18, tc19] + fillers + [tc24, tc20, tc22]),
+    ("item", [tc16, tc17, tc18, tc19] + fillers + [tc24, tc20, tc22, tc50]),
 ])
 
 # --- payment: explicit booking creation, no async ------------------------
-def booking_create(name, hour, id_var, label):
+def booking_create(name, id_var, label):
+    """One request that creates a dedicated booking for a payment case.
+
+    It picks a random future window in the pre-request script (pure
+    computation, always safe) and saves the new booking id in its test script.
+
+    NOTE: build the variable names FIRST. Concatenating "_start" onto the
+    result of a %-format appends it *after* the statement's semicolon, which
+    produces `...set('x', ...);_start` — a ReferenceError in Postman that
+    aborts the request and shows up as "No response".
+    """
+    start_var = id_var + "_start"
+    end_var = id_var + "_end"
     return build(
         name, "POST", "/api/bookings", "userToken",
         body=("{\n"
               '  "vehicleId": "{{vehicleId}}",\n'
               '  "serviceId": "{{serviceId}}",\n'
-              '  "startTime": "{{slotDate}}T%s:00:00",\n'
-              '  "endTime": "{{slotDate}}T%s:00:00"\n'
-              "}" % (hour, "%02d" % (int(hour) + 1))),
+              '  "startTime": "{{%s}}",\n'
+              '  "endTime": "{{%s}}"\n'
+              "}" % (start_var, end_var)),
         prereq=[
-            "// Random window per run: a booking can only be paid once, and a paid",
-            "// booking keeps its slot, so a fixed window would fill up over runs.",
+            "// Pick a random future window. A booking can only be paid once and a paid",
+            "// booking keeps its slot, so a fixed window would fill up across runs.",
             "const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 200)) * 864e5);",
             "const date = day.toISOString().slice(0, 10);",
-            "const hour = %d;" % int(hour),
+            "const hour = Math.floor(Math.random() * 22);",
             "const pad = n => String(n).padStart(2, '0');",
-            "pm.collectionVariables.set('%s', date + 'T' + pad(hour) + ':00:00');" % id_var + "_start",
-            "pm.collectionVariables.set('%s', date + 'T' + pad(hour + 1) + ':00:00');" % id_var + "_end",
+            "pm.collectionVariables.set('%s', date + 'T' + pad(hour) + ':00:00');" % start_var,
+            "pm.collectionVariables.set('%s', date + 'T' + pad(hour + 1) + ':00:00');" % end_var,
+            "console.log('%s: booking window ' + pm.collectionVariables.get('%s'));"
+            % (name.split(':')[0], start_var),
         ],
         tests=[
-            "pm.test('%s status is 201', () => pm.response.to.have.status(201));" % name.split()[0],
+            "pm.test('setup request created a booking',",
+            "    () => pm.response.to.have.status(201));",
             "const b = pm.response.json();",
             "pm.collectionVariables.set('%s', b.id);" % id_var,
-            "console.log('created booking %s for %s' .replace('%s','') + b.id);",
+            "console.log('%s: saved %s = ' + b.id);" % (name, id_var),
         ],
-        description="Creates a dedicated PENDING booking for %s and saves it as %s." % (label, id_var),
+        description="Creates a dedicated PENDING booking for %s and saves its id as `%s`."
+                    % (label, id_var),
     )
 
-# fix the booking_create bodies to use the generated window variables
-def retarget(req, start_var, end_var):
-    req["request"]["body"]["raw"] = (
-        "{\n"
-        '  "vehicleId": "{{vehicleId}}",\n'
-        '  "serviceId": "{{serviceId}}",\n'
-        '  "startTime": "{{%s}}",\n'
-        '  "endTime": "{{%s}}"\n'
-        "}" % (start_var, end_var)
-    )
-    return req
 
-create_ok = retarget(booking_create(
-    "Setup: create booking to pay", 10, "payOkBookingId", "the success payment"),
-    "payOkBookingId_start", "payOkBookingId_end")
-create_fail = retarget(booking_create(
-    "Setup: create booking for forced failure", 12, "failBookingId", "the failure payment"),
-    "failBookingId_start", "failBookingId_end")
-# tidy the noisy console line
-for r in (create_ok, create_fail):
-    for e in r["event"]:
-        if e["listen"] == "test":
-            e["script"]["exec"] = [l for l in e["script"]["exec"] if "console.log" not in l]
+create_ok = booking_create(
+    "Setup: create booking to pay", "payOkBookingId", "the success payment")
+create_fail = booking_create(
+    "Setup: create booking for forced failure", "failBookingId", "the failure payment")
+# keep the console.log lines — they tell the user which booking was created
 
 tc25 = find(coll["item"], "TC-25")
 tc26 = find(coll["item"], "TC-26")
 
-guard = lambda var, name: [
-    "// Fail with a readable message instead of sending a literal {{%s}}," % var,
-    "// which would come back as a confusing 404.",
-    "const id = pm.collectionVariables.get('%s');" % var,
-    "if (!id) {",
-    "    console.error('%s: %s is empty — run \"%s\" first');" % (name, var, name),
-    "    pm.collectionVariables.set('%s', 'missing-run-the-setup-request-first');" % var,
-    "}",
-]
+def guard(var, label, setup_name):
+    """Abort with a readable message when the booking id is unusable.
+
+    A booking id is a 36-character UUID. Anything else — an empty value, or a
+    stale timestamp left behind by the earlier broken setup request — cannot be
+    paid, and sending it would return a confusing 404.
+    """
+    return [
+        "const id = pm.collectionVariables.get('%s');" % var,
+        "const usable = typeof id === 'string' && id.length >= 32;",
+        "if (!usable) {",
+        "    console.error('%s: %s is \"' + id + '\" — run \"%s\" first');"
+        % (label, var, setup_name),
+        "    pm.collectionVariables.set('%s', 'missing-run-the-setup-request-first');" % var,
+        "}",
+    ]
 set_events(
     tc23,
     prereq=[
@@ -324,7 +347,7 @@ tc23["request"]["description"] = (
 
 set_events(
     tc25,
-    prereq=guard("payOkBookingId", "TC-25"),
+    prereq=guard("payOkBookingId", "TC-25", "Setup: create booking to pay"),
     tests=[
         "pm.test('TC-25 status is 200', () => pm.response.to.have.status(200));",
         "pm.test('TC-25 payment SUCCESS',",
@@ -333,7 +356,7 @@ set_events(
 )
 set_events(
     tc26,
-    prereq=guard("failBookingId", "TC-26"),
+    prereq=guard("failBookingId", "TC-26", "Setup: create booking for forced failure"),
     tests=[
         "pm.test('TC-26 status is 200', () => pm.response.to.have.status(200));",
         "pm.test('TC-26 payment FAILED',",
@@ -376,9 +399,92 @@ teardown["name"] = "9. Teardown (optional cleanup)"
 
 coll["item"] = [auth, setup, vehicles, stations, bookings, payment, security, misc, teardown]
 
-coll["info"]["description"] = coll["info"]["description"].replace(
-    "1. Run the three logins in folder 1, then the three requests in folder 2 (Setup) -",
-    "1. Run the three logins in folder 1, then the three requests in folder 2 (Setup) -")
+coll["info"]["description"] = """\
+ACCEPTANCE TESTS — EV Charging & Battery-Swap Finder backend (CSE 2118)
+
+=====================================================
+RUN EVERYTHING AT ONCE (Collection Runner)
+=====================================================
+1. Start MySQL (XAMPP) and the backend REBUILT FROM THE CURRENT SOURCE, then check:
+     http://localhost:8080/api/stations   ->   401 Unauthorized
+2. Hover the collection name -> '...' (More actions) -> 'Run collection'.
+   (Older Postman: open the collection and press 'Run' on the Overview tab.)
+3. Keep the defaults: Iterations 1, Delay 0, and the folder order unchanged.
+4. Press Run. Expect 0 failures across 47 requests.
+5. Folder 9 (Teardown) deletes the test vehicles — untick it to inspect them instead.
+
+The folder order matters and is already correct: folder 1 saves the JWTs, folder 2 saves the
+ids every later request needs, and folder 7 (Security) runs after folder 5 because TC-23
+needs a booking to exist. No request relies on asynchronous code — an earlier version
+created bookings in a pre-request script with pm.sendRequest, whose callback can fire after
+the request has been sent in the Runner, leaving the variable empty and producing a 404.
+
+=====================================================
+SETUP REQUESTS (already positioned for you)
+=====================================================
+  Fill capacity 1 / 2 / 3                  (folder 5) -> makes TC-24 return 409
+  Setup: create booking to pay             (folder 6) -> a fresh unpaid booking for TC-25
+  Setup: create booking for forced failure (folder 6) -> the same for TC-26
+
+TC-16 and both setup requests pick a RANDOM future window, so repeated runs never collide
+with slots an earlier run already occupied.
+
+=====================================================
+SECTION 8 SCREENSHOTS
+=====================================================
+The Runner proves the suite passes; the report needs screenshots showing the method, URL,
+request body and status code. For those, run the individual requests:
+1. Run the three logins (folder 1) and the three Setup requests (folder 2). For a payment
+   figure, also run the matching 'Setup: create booking...' request directly above it.
+2. Open the request, click the 'Body' tab in the REQUEST pane so the JSON is visible,
+   press Send, then screenshot the window (the status code is top-right of the response).
+3. Figure-to-request mapping is in docs/HOW-TO-SCREENSHOTS.md.
+
+=====================================================
+IF SOMETHING FAILS
+=====================================================
+- Open the Postman Console (bottom-left) first: every script logs what it did.
+- Many 401s or 'missing variable' -> you started past folder 2; run from the top.
+- TC-25 / TC-26 404 -> run the matching 'Setup: create booking...' request above it.
+- TC-50 500 -> your backend predates the vehicle delete-guard fix; rebuild and restart.
+- To start fresh: Collection -> Variables -> Reset All, then re-run folders 1 and 2.
+
+A standalone validator that runs this whole collection outside Postman (and catches the
+class of script bug described above) is in docs/validate_collection.js:
+     node docs/validate_collection.js http://localhost:8080
+"""
+
+# ---------------------------------------------------------------------------
+# Guard rails: fail here, not in the user's Runner
+# ---------------------------------------------------------------------------
+import os
+import subprocess
+import tempfile
+
+missing = [f.get("name") if f else None for f in coll["item"]]
+assert None not in missing, "a folder lookup returned None: %s" % missing
+for _f in coll["item"]:
+    assert None not in _f.get("item", []), "a request lookup returned None in %s" % _f["name"]
+
+problems = []
+for _f in coll["item"]:
+    for _r in _f.get("item", []):
+        for _e in _r.get("event", []):
+            js = "\n".join(_e["script"]["exec"])
+            with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False,
+                                             encoding="utf-8") as fh:
+                fh.write(js + "\n")
+                tmp = fh.name
+            res = subprocess.run(["node", "--check", tmp], capture_output=True, text=True)
+            os.unlink(tmp)
+            if res.returncode != 0:
+                problems.append((_r["name"], _e["listen"], res.stderr.strip().splitlines()[:3]))
+if problems:
+    for name, kind, err in problems:
+        print("JS SYNTAX ERROR in", name, "[" + kind + "]")
+        for line in err:
+            print("   ", line)
+    raise SystemExit("refusing to write a collection with invalid JavaScript")
 
 io.open(PATH, "w", encoding="utf-8").write(json.dumps(coll, indent=2) + "\n")
 print("collection rebuilt: no request depends on asynchronous HTTP")

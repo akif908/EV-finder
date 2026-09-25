@@ -1,12 +1,11 @@
 $kind: http-request
-name: TC-20 GET /api/bookings/my (200)
-url: "{{baseUrl}}/api/bookings/my"
+url: "{{baseUrl}}/api/bookings/does-not-exist"
 method: GET
 headers:
   Authorization: Bearer {{userToken}}
   Content-Type: application/json
 scripts:
   - type: afterResponse
-    code: pm.test('TC-20 status is 200', () => pm.response.to.have.status(200));
+    code: pm.test('TC-22 status is 404', () => pm.response.to.have.status(404));
     language: text/javascript
-order: 6000
+order: 10000

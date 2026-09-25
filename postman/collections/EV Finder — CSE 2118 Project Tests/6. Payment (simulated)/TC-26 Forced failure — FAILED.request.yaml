@@ -1,0 +1,35 @@
+$kind: http-request
+description: |-
+  Expected 200 with "status": "FAILED" — the simulated gateway's failure path, which releases the slot.
+
+  Run 'Setup: create booking for forced failure' first; it saves failBookingId, a booking that no other case has paid.
+url: "{{baseUrl}}/api/payments/{{failBookingId}}"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "paymentMethod": "CARD",
+      "forceFailure": true
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Fail with a readable message instead of sending a literal {{failBookingId}},
+      // which would come back as a confusing 404.
+      const id = pm.collectionVariables.get('failBookingId');
+      if (!id) {
+          console.error('TC-26: failBookingId is empty — run "TC-26" first');
+          pm.collectionVariables.set('failBookingId', 'missing-run-the-setup-request-first');
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-26 status is 200', () => pm.response.to.have.status(200));
+      pm.test('TC-26 payment FAILED',
+          () => pm.expect(pm.response.json().status).to.eql('FAILED'));
+    language: text/javascript
+order: 4000

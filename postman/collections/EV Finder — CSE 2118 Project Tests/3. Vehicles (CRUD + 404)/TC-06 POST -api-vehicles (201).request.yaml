@@ -1,0 +1,40 @@
+$kind: http-request
+name: TC-06 POST /api/vehicles (201)
+description: |-
+  Expected 201 Created.
+
+  The registration number is generated fresh for each run and any leftover TST-* vehicle is removed first, so repeated runs no longer collide (that column is globally unique).
+url: "{{baseUrl}}/api/vehicles"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "manufacturer": "Test",
+      "model": "Acceptance Car",
+      "vehicleType": "ELECTRIC_CAR",
+      "connectorType": "CCS2",
+      "batteryCapacityKwh": 60,
+      "registrationNo": "{{testRegNo}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // A fresh registration number per run. registration_no is GLOBALLY unique,
+      // so a fixed value made a second run fail with 409 against the row left by
+      // the previous run. This is pure computation, so it is always safe.
+      pm.collectionVariables.set('testRegNo', 'TST-' + Date.now().toString().slice(-8));
+      console.log('TC-06: registration for this run = ' + pm.collectionVariables.get('testRegNo'));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-06 status is 201', () => pm.response.to.have.status(201));
+      const v = pm.response.json();
+      pm.test('registration number is this run\'s value',
+          () => pm.expect(v.registrationNo).to.eql(pm.collectionVariables.get('testRegNo')));
+      pm.collectionVariables.set('createdVehicleId', v.id);
+    language: text/javascript
+order: 1000

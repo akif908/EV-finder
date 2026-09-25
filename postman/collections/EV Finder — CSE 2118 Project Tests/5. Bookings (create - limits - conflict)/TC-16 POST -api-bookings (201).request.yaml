@@ -1,0 +1,41 @@
+$kind: http-request
+name: TC-16 POST /api/bookings (201)
+description: |-
+  Expected 201 Created with status PENDING.
+
+  Picks a random free window each run, so the case keeps passing no matter how often the collection is run. Saves the id as bookingId for the later cases.
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "vehicleId": "{{vehicleId}}",
+      "serviceId": "{{serviceId}}",
+      "startTime": "{{bkStart}}",
+      "endTime": "{{bkEnd}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Pick a random future window so repeated runs never collide. Capacity is
+      // finite, so a fixed window would fill up and TC-16 would start answering 409.
+      const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 200)) * 864e5);
+      const date = day.toISOString().slice(0, 10);
+      const hour = Math.floor(Math.random() * 22);
+      const pad = n => String(n).padStart(2, '0');
+      pm.collectionVariables.set('bkStart', date + 'T' + pad(hour) + ':00:00');
+      pm.collectionVariables.set('bkEnd', date + 'T' + pad(hour + 1) + ':00:00');
+      console.log('TC-16: booking window ' + pm.collectionVariables.get('bkStart'));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-16 status is 201', () => pm.response.to.have.status(201));
+      const b = pm.response.json();
+      pm.test('starts as PENDING', () => pm.expect(b.status).to.eql('PENDING'));
+      pm.collectionVariables.set('bookingId', b.id);
+    language: text/javascript
+order: 1000

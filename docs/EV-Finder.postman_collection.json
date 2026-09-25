@@ -2,7 +2,7 @@
   "info": {
     "name": "EV Finder \u2014 CSE 2118 Project Tests",
     "_postman_id": "b7f1c2a4-9d3e-4a51-8f60-2c7e5b91a001",
-    "description": "Acceptance tests for the EV Charging & Battery-Swap Finder backend.\n\n=====================================================\nRUN EVERYTHING AT ONCE (Collection Runner)\n=====================================================\n1. Start MySQL (XAMPP) and the backend, then confirm it answers:\n   http://localhost:8080/api/stations  ->  401\n2. Hover the collection name in the sidebar -> '...' (More actions) -> 'Run collection'.\n   (Older Postman: click the collection, then the 'Run' button on the Overview tab.)\n3. Leave the settings as they are: Iterations = 1, Delay = 0, order = the folder order.\n   Do NOT reorder \u2014 folder 1 saves the JWTs and folder 2 saves the ids that every\n   later request needs.\n4. Tick 'Save responses' if you want to click into each response afterwards.\n5. Press 'Run EV Finder - CSE 2118 Project Tests'.\n6. Read the results: each request shows PASS/FAIL, status code, time and size.\n   Expect 0 failures. Click any row in 'Run Results' to open that request again.\n\nFolder 9 (Teardown) is optional cleanup \u2014 it deletes test vehicles. Include it for a\ntidy database, or untick it if you want to inspect the created vehicle afterwards.\n\n=====================================================\nTAKING THE SECTION 8 SCREENSHOTS\n=====================================================\nThe Runner proves the suite passes, but the report needs screenshots showing the\nmethod, URL, request body and status code. For those, run the individual requests:\n\n1. Run the three logins in folder 1, then the three requests in folder 2 (Setup) -\n   their test scripts store the token and ids in collection variables.\n2. Open the request you need, click the 'Body' tab in the REQUEST pane so the JSON is\n   visible, press Send, then screenshot the whole window (status code is top-right of\n   the response pane).\n3. Figure-to-request mapping is in docs/HOW-TO-SCREENSHOTS.md.\n\n=====================================================\nNOTES\n=====================================================\n- Collection variable 'baseUrl' defaults to http://localhost:8080.\n- Folders are ordered so that state is created before it is used, and no request relies\n  on asynchronous code (a pre-request script that awaits an HTTP call can fire after the\n  request in the Runner). Instead:\n    * Folder 5 holds three explicit 'Fill capacity' requests before TC-24, so the window\n      really is full and 409 is guaranteed.\n    * Folder 6 places 'Setup: create booking to pay' before TC-25 and\n      'Setup: create booking for forced failure' before TC-26, because a booking can only\n      be paid once and each payment case needs its own.\n    * TC-16 and the two setup requests pick a RANDOM future window, so repeated runs never\n      collide with slots a previous run already occupied.\n    * TC-23 lives in folder 7 because it needs a booking to exist (created in folder 5).\n- Open the Postman Console (bottom-left) to see what each script did.\n- To start completely fresh: Collection -> Variables -> Reset All, then re-run\n  folders 1 and 2.",
+    "description": "ACCEPTANCE TESTS \u2014 EV Charging & Battery-Swap Finder backend (CSE 2118)\n\n=====================================================\nRUN EVERYTHING AT ONCE (Collection Runner)\n=====================================================\n1. Start MySQL (XAMPP) and the backend REBUILT FROM THE CURRENT SOURCE, then check:\n     http://localhost:8080/api/stations   ->   401 Unauthorized\n2. Hover the collection name -> '...' (More actions) -> 'Run collection'.\n   (Older Postman: open the collection and press 'Run' on the Overview tab.)\n3. Keep the defaults: Iterations 1, Delay 0, and the folder order unchanged.\n4. Press Run. Expect 0 failures across 47 requests.\n5. Folder 9 (Teardown) deletes the test vehicles \u2014 untick it to inspect them instead.\n\nThe folder order matters and is already correct: folder 1 saves the JWTs, folder 2 saves the\nids every later request needs, and folder 7 (Security) runs after folder 5 because TC-23\nneeds a booking to exist. No request relies on asynchronous code \u2014 an earlier version\ncreated bookings in a pre-request script with pm.sendRequest, whose callback can fire after\nthe request has been sent in the Runner, leaving the variable empty and producing a 404.\n\n=====================================================\nSETUP REQUESTS (already positioned for you)\n=====================================================\n  Fill capacity 1 / 2 / 3                  (folder 5) -> makes TC-24 return 409\n  Setup: create booking to pay             (folder 6) -> a fresh unpaid booking for TC-25\n  Setup: create booking for forced failure (folder 6) -> the same for TC-26\n\nTC-16 and both setup requests pick a RANDOM future window, so repeated runs never collide\nwith slots an earlier run already occupied.\n\n=====================================================\nSECTION 8 SCREENSHOTS\n=====================================================\nThe Runner proves the suite passes; the report needs screenshots showing the method, URL,\nrequest body and status code. For those, run the individual requests:\n1. Run the three logins (folder 1) and the three Setup requests (folder 2). For a payment\n   figure, also run the matching 'Setup: create booking...' request directly above it.\n2. Open the request, click the 'Body' tab in the REQUEST pane so the JSON is visible,\n   press Send, then screenshot the window (the status code is top-right of the response).\n3. Figure-to-request mapping is in docs/HOW-TO-SCREENSHOTS.md.\n\n=====================================================\nIF SOMETHING FAILS\n=====================================================\n- Open the Postman Console (bottom-left) first: every script logs what it did.\n- Many 401s or 'missing variable' -> you started past folder 2; run from the top.\n- TC-25 / TC-26 404 -> run the matching 'Setup: create booking...' request above it.\n- TC-50 500 -> your backend predates the vehicle delete-guard fix; rebuild and restart.\n- To start fresh: Collection -> Variables -> Reset All, then re-run folders 1 and 2.\n\nA standalone validator that runs this whole collection outside Postman (and catches the\nclass of script bug described above) is in docs/validate_collection.js:\n     node docs/validate_collection.js http://localhost:8080\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -1296,6 +1296,47 @@
               ]
             }
           }
+        },
+        {
+          "name": "TC-50 DELETE vehicle with booking history (409)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/vehicles/{{vehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "vehicles",
+                "{{vehicleId}}"
+              ]
+            },
+            "description": "Expected 409 Conflict. A vehicle referenced by bookings cannot be deleted: the foreign key is ON DELETE RESTRICT, so before the service guarded this the API answered 500. TC-16 above has just booked this vehicle, which is what gives it history, so the delete is always refused and nothing is lost."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('TC-50 status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('message explains the vehicle cannot be deleted',",
+                  "    () => pm.expect(pm.response.json().message).to.contain('booking history'));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -1331,7 +1372,7 @@
               "mode": "raw",
               "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{payOkBookingId_start}}\",\n  \"endTime\": \"{{payOkBookingId_end}}\"\n}"
             },
-            "description": "Creates a dedicated PENDING booking for the success payment and saves it as payOkBookingId."
+            "description": "Creates a dedicated PENDING booking for the success payment and saves its id as `payOkBookingId`."
           },
           "event": [
             {
@@ -1339,14 +1380,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Random window per run: a booking can only be paid once, and a paid",
-                  "// booking keeps its slot, so a fixed window would fill up over runs.",
+                  "// Pick a random future window. A booking can only be paid once and a paid",
+                  "// booking keeps its slot, so a fixed window would fill up across runs.",
                   "const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 200)) * 864e5);",
                   "const date = day.toISOString().slice(0, 10);",
-                  "const hour = 10;",
+                  "const hour = Math.floor(Math.random() * 22);",
                   "const pad = n => String(n).padStart(2, '0');",
-                  "pm.collectionVariables.set('payOkBookingId', date + 'T' + pad(hour) + ':00:00');_start",
-                  "pm.collectionVariables.set('payOkBookingId', date + 'T' + pad(hour + 1) + ':00:00');_end"
+                  "pm.collectionVariables.set('payOkBookingId_start', date + 'T' + pad(hour) + ':00:00');",
+                  "pm.collectionVariables.set('payOkBookingId_end', date + 'T' + pad(hour + 1) + ':00:00');",
+                  "console.log('Setup: booking window ' + pm.collectionVariables.get('payOkBookingId_start'));"
                 ]
               }
             },
@@ -1355,9 +1397,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Setup: status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('setup request created a booking',",
+                  "    () => pm.response.to.have.status(201));",
                   "const b = pm.response.json();",
-                  "pm.collectionVariables.set('payOkBookingId', b.id);"
+                  "pm.collectionVariables.set('payOkBookingId', b.id);",
+                  "console.log('Setup: create booking to pay: saved payOkBookingId = ' + b.id);"
                 ]
               }
             }
@@ -1371,11 +1415,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Fail with a readable message instead of sending a literal {{payOkBookingId}},",
-                  "// which would come back as a confusing 404.",
                   "const id = pm.collectionVariables.get('payOkBookingId');",
-                  "if (!id) {",
-                  "    console.error('TC-25: payOkBookingId is empty \u2014 run \"TC-25\" first');",
+                  "const usable = typeof id === 'string' && id.length >= 32;",
+                  "if (!usable) {",
+                  "    console.error('TC-25: payOkBookingId is \"' + id + '\" \u2014 run \"Setup: create booking to pay\" first');",
                   "    pm.collectionVariables.set('payOkBookingId', 'missing-run-the-setup-request-first');",
                   "}"
                 ]
@@ -1451,7 +1494,7 @@
               "mode": "raw",
               "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"startTime\": \"{{failBookingId_start}}\",\n  \"endTime\": \"{{failBookingId_end}}\"\n}"
             },
-            "description": "Creates a dedicated PENDING booking for the failure payment and saves it as failBookingId."
+            "description": "Creates a dedicated PENDING booking for the failure payment and saves its id as `failBookingId`."
           },
           "event": [
             {
@@ -1459,14 +1502,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Random window per run: a booking can only be paid once, and a paid",
-                  "// booking keeps its slot, so a fixed window would fill up over runs.",
+                  "// Pick a random future window. A booking can only be paid once and a paid",
+                  "// booking keeps its slot, so a fixed window would fill up across runs.",
                   "const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 200)) * 864e5);",
                   "const date = day.toISOString().slice(0, 10);",
-                  "const hour = 12;",
+                  "const hour = Math.floor(Math.random() * 22);",
                   "const pad = n => String(n).padStart(2, '0');",
-                  "pm.collectionVariables.set('failBookingId', date + 'T' + pad(hour) + ':00:00');_start",
-                  "pm.collectionVariables.set('failBookingId', date + 'T' + pad(hour + 1) + ':00:00');_end"
+                  "pm.collectionVariables.set('failBookingId_start', date + 'T' + pad(hour) + ':00:00');",
+                  "pm.collectionVariables.set('failBookingId_end', date + 'T' + pad(hour + 1) + ':00:00');",
+                  "console.log('Setup: booking window ' + pm.collectionVariables.get('failBookingId_start'));"
                 ]
               }
             },
@@ -1475,9 +1519,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Setup: status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('setup request created a booking',",
+                  "    () => pm.response.to.have.status(201));",
                   "const b = pm.response.json();",
-                  "pm.collectionVariables.set('failBookingId', b.id);"
+                  "pm.collectionVariables.set('failBookingId', b.id);",
+                  "console.log('Setup: create booking for forced failure: saved failBookingId = ' + b.id);"
                 ]
               }
             }
@@ -1491,11 +1537,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Fail with a readable message instead of sending a literal {{failBookingId}},",
-                  "// which would come back as a confusing 404.",
                   "const id = pm.collectionVariables.get('failBookingId');",
-                  "if (!id) {",
-                  "    console.error('TC-26: failBookingId is empty \u2014 run \"TC-26\" first');",
+                  "const usable = typeof id === 'string' && id.length >= 32;",
+                  "if (!usable) {",
+                  "    console.error('TC-26: failBookingId is \"' + id + '\" \u2014 run \"Setup: create booking for forced failure\" first');",
                   "    pm.collectionVariables.set('failBookingId', 'missing-run-the-setup-request-first');",
                   "}"
                 ]

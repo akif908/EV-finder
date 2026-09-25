@@ -115,7 +115,7 @@ shows a green PASS — a second screenshot per case is optional but strengthens 
 
 ## A0. Running the whole collection at once (Collection Runner)
 
-Use this to prove all 41 requests pass in one go. For the report's figures you still need the
+Use this to prove all 47 requests pass in one go. For the report's figures you still need the
 individual requests from A5 — the Runner is for the pass/fail evidence, not for the screenshots.
 
 1. **Start the stack first.** MySQL (XAMPP) and the backend — rebuilt from the current source, see
@@ -141,7 +141,7 @@ Folder                                    Requests   Failures
 2. Setup (run once, saves ids)               3          0
 3. Vehicles (CRUD + 404)                     5          0
 4. Stations & availability                   5          0
-5. Bookings (create / limits / conflict)    10          0
+5. Bookings (create / limits / conflict)    11          0
 6. Payment (simulated)                       5          0
 7. Security (401 / 403)                      5          0
 8. Reviews, notifications, issues, fuel…     7          0
@@ -162,6 +162,22 @@ already in the right position, so a top-to-bottom run needs no thought:
 Folder **9. Teardown** deletes the test vehicles. Untick it if you want to inspect the created
 vehicle afterwards, or run it later on its own.
 
+### Running the collection outside Postman (optional)
+
+`docs/validate_collection.js` stubs the Postman `pm` API, runs every request in order and reports
+each assertion. It needs no Postman installation and exits non-zero on failure:
+
+```bash
+node docs/validate_collection.js http://localhost:8080
+# assertions: 59   passed: 59   failed: 0
+# COLLECTION OK
+```
+
+This exists because a bug in the collection's own scripts cost two rounds of debugging: a line like
+`pm.collectionVariables.set('x', ...);_start` is *syntactically* valid, so a syntax check passes it,
+but it throws at runtime — Postman then aborts the request ("No response") and the variable stays
+empty. Only executing the scripts catches that, which this harness does.
+
 ### Exporting the run results (optional extra evidence)
 
 In the Runner, after the run finishes: **Export Results** → save the JSON, or **Ctrl+P** the results
@@ -176,6 +192,8 @@ because they do not show the request body.
 | `TC-06` → `409` | A vehicle with that registration number survived an earlier run (the column is globally unique) | Now impossible: TC-06 generates a unique number and sweeps leftovers. If you still see it, your imported collection is the older copy — re-import |
 | `TC-24` → `201` | The service is not full, so the booking is legitimately accepted | Run the three **Fill capacity** requests above TC-24 first (a top-to-bottom run does this for you) |
 | `TC-25` or `TC-26` → `404` | The payment URL still held the literal `{{payOkBookingId}}` / `{{failBookingId}}` because nothing had set it | Run the matching `Setup: create booking…` request immediately above the case. A top-to-bottom run does this automatically |
+| A request shows **"No response"** | A script in it threw, so Postman aborted the request before sending it | Check the Postman Console for the error. Re-import the collection — this was caused by a bug in an older copy of the setup requests |
+| `TC-50` → `409` is expected; `TC-50` → `500` | 500 means the backend predates the delete-guard fix | Rebuild and restart the backend |
 | `TC-26` → `400 "already paid"` | It was pointed at a booking TC-25 had paid | Fixed by the dedicated setup request. Re-import if you still see this |
 | `TC-50` → `500` | Your backend predates the delete-guard fix | Rebuild and restart the backend |
 | `TC-23` → `404` | No booking id and the user has no bookings | Run folder 6 (TC-16) first, or let the pre-request script find one |

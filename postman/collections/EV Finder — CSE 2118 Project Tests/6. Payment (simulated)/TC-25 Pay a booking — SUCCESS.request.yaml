@@ -1,0 +1,35 @@
+$kind: http-request
+description: |-
+  Expected 200 with "status": "SUCCESS" and a SIM-<reference> transaction number.
+
+  Run the 'Setup: create booking to pay' request immediately above first — it creates a fresh PENDING booking and saves payOkBookingId. A booking can only be paid once, which is why the collection creates its own instead of reusing another case's booking.
+url: "{{baseUrl}}/api/payments/{{payOkBookingId}}"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "paymentMethod": "MOBILE_BANKING",
+      "forceFailure": false
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Fail with a readable message instead of sending a literal {{payOkBookingId}},
+      // which would come back as a confusing 404.
+      const id = pm.collectionVariables.get('payOkBookingId');
+      if (!id) {
+          console.error('TC-25: payOkBookingId is empty — run "TC-25" first');
+          pm.collectionVariables.set('payOkBookingId', 'missing-run-the-setup-request-first');
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('TC-25 status is 200', () => pm.response.to.have.status(200));
+      pm.test('TC-25 payment SUCCESS',
+          () => pm.expect(pm.response.json().status).to.eql('SUCCESS'));
+    language: text/javascript
+order: 2000

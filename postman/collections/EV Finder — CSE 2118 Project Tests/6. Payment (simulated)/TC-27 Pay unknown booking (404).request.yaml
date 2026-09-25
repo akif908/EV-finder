@@ -15,4 +15,4 @@ scripts:
   - type: afterResponse
     code: pm.test('TC-27 status is 404', () => pm.response.to.have.status(404));
     language: text/javascript
-order: 3000
+order: 5000

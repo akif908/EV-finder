@@ -1,0 +1,36 @@
+$kind: http-request
+name: "Setup: create booking for forced failure"
+description: Creates a dedicated PENDING booking for the failure payment and saves it as failBookingId.
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "vehicleId": "{{vehicleId}}",
+      "serviceId": "{{serviceId}}",
+      "startTime": "{{failBookingId_start}}",
+      "endTime": "{{failBookingId_end}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Random window per run: a booking can only be paid once, and a paid
+      // booking keeps its slot, so a fixed window would fill up over runs.
+      const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 200)) * 864e5);
+      const date = day.toISOString().slice(0, 10);
+      const hour = 12;
+      const pad = n => String(n).padStart(2, '0');
+      pm.collectionVariables.set('failBookingId', date + 'T' + pad(hour) + ':00:00');_start
+      pm.collectionVariables.set('failBookingId', date + 'T' + pad(hour + 1) + ':00:00');_end
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Setup: status is 201', () => pm.response.to.have.status(201));
+      const b = pm.response.json();
+      pm.collectionVariables.set('failBookingId', b.id);
+    language: text/javascript
+order: 3000

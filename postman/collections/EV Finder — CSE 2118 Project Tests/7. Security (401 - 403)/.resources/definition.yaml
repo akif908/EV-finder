@@ -1,0 +1,4 @@
+$kind: collection
+name: 7. Security (401 / 403)
+description: Authorisation cases. Runs after Bookings because TC-23 needs a booking to exist in order to be forbidden from reading it.
+order: 7000
